@@ -24,10 +24,15 @@ mailhog-down:
 	$(MAKE) -C $(INFRA_PATH) mailhog-down
 
 up:
-	$(COMPOSE) -f docker-compose.app.yaml up -d --build
+	$(COMPOSE) -f docker-compose.yaml up -d --build
 
 down:
-	$(COMPOSE) -f docker-compose.app.yaml down -v
+	$(COMPOSE) -f docker-compose.yaml down -v
 
 cleanup:
 	$(MAKE) -C $(INFRA_PATH) cleanup
+
+monitoring-up:
+	$(MAKE) -C $(INFRA_PATH) monitoring-up
+monitoring-down:
+	$(MAKE) -C $(INFRA_PATH) monitoring-down

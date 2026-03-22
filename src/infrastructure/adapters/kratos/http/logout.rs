@@ -25,7 +25,6 @@ impl KratosSessionAdapter {
             cache,
         }
     }
-
     async fn get_logout_flow(&self, cookie: &str) -> Result<String, DomainError> {
         let url = format!("{}/self-service/logout/browser", self.client.public_url);
 
@@ -39,7 +38,7 @@ impl KratosSessionAdapter {
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         match response.status() {
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::SEE_OTHER | StatusCode::FOUND => {
                 return Err(AuthError::NotAuthenticated.into());
             }
             StatusCode::TOO_MANY_REQUESTS => {
@@ -59,10 +58,14 @@ impl KratosSessionAdapter {
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        data["logout_url"]
+        let logout_token = data["logout_token"]
             .as_str()
-            .map(|s| s.to_string())
-            .ok_or_else(|| DomainError::InvalidData("Logout URL not found".into()))
+            .ok_or_else(|| DomainError::InvalidData("Logout token not found".into()))?;
+
+        Ok(format!(
+            "{}/self-service/logout?token={}",
+            self.client.public_url, logout_token
+        ))
     }
 
     fn extract_session_token(cookie: &str) -> Option<String> {
