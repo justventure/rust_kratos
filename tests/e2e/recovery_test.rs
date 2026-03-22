@@ -3,8 +3,10 @@ use rust_kratos::domain::ports::inbound::recovery::{RecoveryPort, RecoveryReques
 use rust_kratos::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
+use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
+use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -12,7 +14,8 @@ use common::{MailhogClient, TestContext};
 
 async fn register_user(ctx: &TestContext) -> String {
     let email = TestContext::random_email();
-    let adapter = KratosRegistrationAdapter::new(ctx.client.clone());
+    let session = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
+    let adapter = KratosRegistrationAdapter::new(ctx.client.clone(), session);
     let flow_id = adapter.initiate_registration(None).await.unwrap();
     adapter
         .complete_registration(

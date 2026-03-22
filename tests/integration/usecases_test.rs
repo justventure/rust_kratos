@@ -36,7 +36,10 @@ fn make_session_adapter(ctx: &TestContext) -> Arc<dyn SessionPort> {
 }
 
 fn make_register_handler(ctx: &TestContext) -> RegisterCommandHandler {
-    RegisterCommandHandler::new(Arc::new(KratosRegistrationAdapter::new(ctx.client.clone())))
+    RegisterCommandHandler::new(Arc::new(KratosRegistrationAdapter::new(
+        ctx.client.clone(),
+        make_session_adapter(ctx),
+    )))
 }
 
 fn make_login_handler(ctx: &TestContext) -> LoginCommandHandler {
@@ -70,6 +73,7 @@ async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> S
     let handler = make_register_handler(ctx);
     let result = handler
         .handle(RegisterCommand {
+            cookie: None,
             data: RegistrationData {
                 email: Email::new(email).unwrap(),
                 password: Password::new(password).unwrap(),
@@ -88,6 +92,7 @@ async fn test_register_command_returns_session_cookie() {
     let handler = make_register_handler(&ctx);
     let result = handler
         .handle(RegisterCommand {
+            cookie: None,
             data: RegistrationData {
                 email: Email::new(&TestContext::random_email()).unwrap(),
                 password: Password::new("Test1234!@#$").unwrap(),
