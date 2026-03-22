@@ -8,6 +8,8 @@ pool_max_idle_per_host = 10
 max_retries = 3
 retry_delay_ms = 1000
 accept_invalid_certs = true
+keep_alive_secs = 90
+keep_alive_interval_secs = 20
 
 [server]
 host = "0.0.0.0"
@@ -19,3 +21,4 @@ url = "redis://valkey:6379"
 cache_ttl_secs = 300
 max_retries = 5
 retry_delay_ms = 2000
+keep_alive_secs = 60

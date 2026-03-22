@@ -48,6 +48,8 @@ pub struct RedisConfig {
     pub max_retries: u32,
     #[serde(default = "defaults::redis_retry_delay")]
     pub retry_delay_ms: u64,
+    #[serde(default = "defaults::redis_keep_alive")]
+    pub keep_alive_secs: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -68,6 +70,10 @@ pub struct KratosConfig {
     pub retry_delay_ms: u64,
     #[serde(default = "defaults::accept_invalid_certs")]
     pub accept_invalid_certs: bool,
+    #[serde(default = "defaults::keep_alive")]
+    pub keep_alive_secs: u64,
+    #[serde(default = "defaults::keep_alive_interval")]
+    pub keep_alive_interval_secs: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -85,13 +91,10 @@ pub struct ServerConfig {
 impl Config {
     pub fn from_env() -> Result<Self, config::ConfigError> {
         dotenvy::dotenv().ok();
-
         let environment = Environment::from_env();
         let config_filename = environment.config_filename();
         let config_path = format!("config/app/{}", config_filename);
-
         info!(path = %format!("{}.toml", config_path), "Loading config file");
-
         let builder = config::Config::builder()
             .add_source(
                 config::File::with_name(&config_path)
@@ -103,7 +106,6 @@ impl Config {
                     .separator("__")
                     .try_parsing(true),
             );
-
         builder.build()?.try_deserialize()
     }
 }
@@ -113,6 +115,7 @@ mod defaults {
     pub fn cache_ttl() -> u64 { 300 }
     pub fn redis_max_retries() -> u32 { 5 }
     pub fn redis_retry_delay() -> u64 { 2000 }
+    pub fn redis_keep_alive() -> u64 { 60 }
     pub fn timeout() -> u64 { 120 }
     pub fn connect_timeout() -> u64 { 30 }
     pub fn pool_idle_timeout() -> u64 { 120 }
@@ -120,6 +123,8 @@ mod defaults {
     pub fn max_retries() -> u32 { 3 }
     pub fn retry_delay() -> u64 { 1000 }
     pub fn accept_invalid_certs() -> bool { false }
+    pub fn keep_alive() -> u64 { 90 }
+    pub fn keep_alive_interval() -> u64 { 20 }
     pub fn log_level() -> String { "info".to_string() }
     pub fn cors_max_age() -> usize { 3600 }
     pub fn cors_allowed_origins() -> Vec<String> { vec!["http://localhost:3000".to_string()] }

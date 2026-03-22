@@ -13,6 +13,8 @@ pub struct KratosClientConfig {
     pub max_retries: u32,
     pub retry_delay_ms: u64,
     pub accept_invalid_certs: bool,
+    pub keep_alive_secs: u64,
+    pub keep_alive_interval_secs: u64,
 }
 
 #[derive(Clone)]
@@ -34,6 +36,10 @@ impl KratosClient {
             .pool_idle_timeout(Duration::from_secs(config.pool_idle_timeout_secs))
             .pool_max_idle_per_host(config.pool_max_idle_per_host)
             .danger_accept_invalid_certs(config.accept_invalid_certs)
+            .tcp_keepalive(Duration::from_secs(config.keep_alive_secs))
+            .http2_keep_alive_interval(Duration::from_secs(config.keep_alive_interval_secs))
+            .http2_keep_alive_timeout(Duration::from_secs(config.keep_alive_secs))
+            .http2_keep_alive_while_idle(true)
             .build()
             .expect("Failed to build HTTP client");
 
@@ -49,7 +55,6 @@ impl KratosClient {
     pub async fn wait_until_ready(&self) -> Result<(), reqwest::Error> {
         let url = format!("{}/health/ready", self.public_url);
         let mut last_err: Option<reqwest::Error> = None;
-
         for attempt in 1..=self.max_retries {
             match self.client.get(&url).send().await {
                 Ok(resp) if resp.status().is_success() => {
@@ -74,12 +79,10 @@ impl KratosClient {
                     last_err = Some(e);
                 }
             }
-
             if attempt < self.max_retries {
                 tokio::time::sleep(self.retry_delay).await;
             }
         }
-
         Err(last_err.expect("no error captured but Kratos never became ready"))
     }
 

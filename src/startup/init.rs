@@ -15,9 +15,7 @@ pub async fn run() -> anyhow::Result<()> {
     let tracing = TracingHandle::init()?;
     let config = Config::from_env()?;
     tracing.set_level(&config.server.log_level)?;
-
     info!("Starting application...");
-
     validate_config(&config)?;
 
     let container_config = ContainerConfig {
@@ -31,12 +29,15 @@ pub async fn run() -> anyhow::Result<()> {
             max_retries: config.kratos.max_retries,
             retry_delay_ms: config.kratos.retry_delay_ms,
             accept_invalid_certs: config.kratos.accept_invalid_certs,
+            keep_alive_secs: config.kratos.keep_alive_secs,
+            keep_alive_interval_secs: config.kratos.keep_alive_interval_secs,
         },
         redis: RedisCacheConfig {
             url: config.redis.url.clone(),
             max_retries: config.redis.max_retries,
             retry_delay_ms: config.redis.retry_delay_ms,
             cache_ttl_secs: config.redis.cache_ttl_secs,
+            keep_alive_secs: config.redis.keep_alive_secs,
         },
     };
 

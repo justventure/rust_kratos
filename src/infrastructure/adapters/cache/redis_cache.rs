@@ -10,6 +10,7 @@ pub struct RedisCacheConfig {
     pub max_retries: u32,
     pub retry_delay_ms: u64,
     pub cache_ttl_secs: u64,
+    pub keep_alive_secs: u64,
 }
 
 #[derive(Clone)]
@@ -18,20 +19,26 @@ pub struct RedisCache {
 }
 
 impl RedisCache {
-    pub async fn new(redis_url: &str) -> Result<Self, DomainError> {
-        let client = redis::Client::open(redis_url).map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
-        let connection = redis::aio::ConnectionManager::new(client)
+    pub async fn new(config: &RedisCacheConfig) -> Result<Self, DomainError> {
+        let client =
+            redis::Client::open(config.url.as_str()).map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+
+        let conn_config = redis::aio::ConnectionManagerConfig::new()
+            .set_connection_timeout(Some(Duration::from_secs(config.keep_alive_secs)))
+            .set_response_timeout(Some(Duration::from_secs(config.keep_alive_secs)));
+
+        let connection = redis::aio::ConnectionManager::new_with_config(client, conn_config)
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+
         Ok(Self { connection })
     }
 
     pub async fn new_with_retry(config: &RedisCacheConfig) -> Result<Self, DomainError> {
         let mut last_err: Option<DomainError> = None;
         let retry_delay = Duration::from_millis(config.retry_delay_ms);
-
         for attempt in 1..=config.max_retries {
-            match Self::new(&config.url).await {
+            match Self::new(config).await {
                 Ok(cache) => {
                     tracing::info!(attempt, "Redis connected");
                     return Ok(cache);
@@ -50,7 +57,6 @@ impl RedisCache {
                 }
             }
         }
-
         Err(last_err.expect("no error captured but Redis never connected"))
     }
 
