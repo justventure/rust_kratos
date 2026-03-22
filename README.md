@@ -1,18 +1,23 @@
-### Kratos rust example service
+# Kratos rust example service
 
-- register
-- login
-- fake http email endpoint
+<div align="left">
+  <!-- Dependencies & security -->
+  <a href="https://deps.rs/repo/github/vwency/rust_kratos"><img src="https://deps.rs/repo/github/vwency/rust_kratos/status.svg"/></a>
+  <!-- Rust -->
+  <img src="https://img.shields.io/badge/rust-1.95.0--nightly-orange?logo=rust"/>
+  <img src="https://img.shields.io/badge/unsafe-forbidden-success?logo=rust"/>
+  <!-- Meta -->
+  <a href="https://github.com/vwency/rust_kratos/blob/main/LICENSE"><img src="https://img.shields.io/github/license/vwency/rust_kratos"/></a>
+  <img src="https://img.shields.io/github/last-commit/vwency/rust_kratos"/>
+</div>
 
 ### Execute
-
 ```
 make infra-up
 make run
 ```
 
 ### Available APP_ENV values
-
 | APP_ENV value    | Используемый конфиг       |
 |------------------|---------------------------|
 | development      | development.toml          |
