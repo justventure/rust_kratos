@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+    <head>
+        <title>API Docs</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="https://unpkg.com/swagger-ui-dist/swagger-ui.css"
+        />
+        <style>
+            :root {
+                --swagger-color: #62a03f;
+                --link-color: #4e9fff;
+                --post-method-color: rgb(73, 204, 95);
+                --post-method-background-color: rgba(73, 204, 95, 0.1);
+                --get-method-color: rgb(97, 175, 254);
+                --get-method-background-color: rgba(97, 175, 254, 0.1);
+                --put-method-color: rgb(252, 161, 48);
+                --put-method-background-color: rgba(252, 161, 48, 0.1);
+                --delete-method-color: rgb(249, 62, 62);
+                --delete-method-background-color: rgba(249, 62, 62, 0.1);
+                --patch-method-color: rgb(80, 227, 194);
+                --patch-method-background-color: rgba(80, 227, 194, 0.1);
+                --all-bg-color: #121212;
+                --secondary-bg-color: #181818;
+                --header-bg-color: #202020;
+                --block-bg-color: #202020;
+                --selecter-bg-color: #202020;
+                --primary-text-color: rgba(255, 255, 255, 1);
+                --secondary-text-color: rgba(255, 255, 255, 0.4);
+                --block-border-color: rgba(255, 255, 255, 0.06);
+                --block-border-radius: 8px;
+                --primary-icon-color: #ffffff;
+                --secondary-icon-opacity: 0.6;
+            }
+            body {
+                background: var(--all-bg-color);
+                margin: 0;
+            }
+            .swagger-ui {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui .topbar {
+                background: var(--header-bg-color);
+            }
+            .swagger-ui .info .title,
+            .swagger-ui .info p,
+            .swagger-ui .info li {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui .scheme-container {
+                background: var(--secondary-bg-color);
+                box-shadow: none;
+            }
+            .swagger-ui section.models {
+                background: var(--secondary-bg-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui section.models .model-container,
+            .swagger-ui .model-box {
+                background: var(--block-bg-color);
+            }
+            .swagger-ui .opblock-tag {
+                color: var(--primary-text-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .opblock {
+                border-radius: var(--block-border-radius);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .opblock .opblock-summary {
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .opblock.opblock-post {
+                background: var(--post-method-background-color);
+                border-color: var(--post-method-color);
+            }
+            .swagger-ui .opblock.opblock-post .opblock-summary-method {
+                background: var(--post-method-color);
+            }
+            .swagger-ui .opblock.opblock-get {
+                background: var(--get-method-background-color);
+                border-color: var(--get-method-color);
+            }
+            .swagger-ui .opblock.opblock-get .opblock-summary-method {
+                background: var(--get-method-color);
+            }
+            .swagger-ui .opblock.opblock-put {
+                background: var(--put-method-background-color);
+                border-color: var(--put-method-color);
+            }
+            .swagger-ui .opblock.opblock-put .opblock-summary-method {
+                background: var(--put-method-color);
+            }
+            .swagger-ui .opblock.opblock-delete {
+                background: var(--delete-method-background-color);
+                border-color: var(--delete-method-color);
+            }
+            .swagger-ui .opblock.opblock-delete .opblock-summary-method {
+                background: var(--delete-method-color);
+            }
+            .swagger-ui .opblock.opblock-patch {
+                background: var(--patch-method-background-color);
+                border-color: var(--patch-method-color);
+            }
+            .swagger-ui .opblock.opblock-patch .opblock-summary-method {
+                background: var(--patch-method-color);
+            }
+            .swagger-ui .opblock-body,
+            .swagger-ui .opblock-section-header {
+                background: var(--block-bg-color);
+            }
+            .swagger-ui .opblock-section-header h4 {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui .opblock-description-wrapper p {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui table thead tr td,
+            .swagger-ui table thead tr th {
+                color: var(--primary-text-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .parameter__name {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui .parameter__type,
+            .swagger-ui .response-col_status,
+            .swagger-ui .response-col_description {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui .responses-inner h4,
+            .swagger-ui .responses-inner h5 {
+                color: var(--primary-text-color);
+            }
+            .swagger-ui select {
+                background: var(--selecter-bg-color);
+                color: var(--primary-text-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui input[type="text"],
+            .swagger-ui textarea {
+                background: var(--secondary-bg-color);
+                color: var(--primary-text-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .btn {
+                color: var(--primary-text-color);
+                border-color: var(--block-border-color);
+            }
+            .swagger-ui .btn.execute {
+                background: var(--swagger-color);
+                border-color: var(--swagger-color);
+                color: #ffffff;
+            }
+            .swagger-ui .btn.authorize {
+                color: var(--swagger-color);
+                border-color: var(--swagger-color);
+            }
+            .swagger-ui a {
+                color: var(--link-color);
+            }
+            .swagger-ui svg {
+                fill: var(--primary-icon-color);
+                opacity: var(--secondary-icon-opacity);
+            }
+            .swagger-ui .highlight-code,
+            .swagger-ui .microlight {
+                background: var(--block-bg-color) !important;
+                color: var(--primary-text-color) !important;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+        <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js"></script>
+        <script>
+            window.onload = function () {
+                window.ui = SwaggerUIBundle({
+                    url: "/api-docs/openapi.json",
+                    dom_id: "#swagger-ui",
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset,
+                    ],
+                    layout: "StandaloneLayout",
+                });
+            };
+        </script>
+    </body>
+</html>

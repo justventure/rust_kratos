@@ -1,0 +1,272 @@
+use rust_kratos::application::commands::CommandHandler;
+use rust_kratos::application::commands::account::recovery::{
+    RecoveryCommand, RecoveryCommandHandler,
+};
+use rust_kratos::application::commands::account::settings::{
+    UpdateSettingsCommand, UpdateSettingsCommandHandler,
+};
+use rust_kratos::application::commands::auth::login::{LoginCommand, LoginCommandHandler};
+use rust_kratos::application::commands::auth::logout::{LogoutCommand, LogoutCommandHandler};
+use rust_kratos::application::commands::identity::register::{
+    RegisterCommand, RegisterCommandHandler,
+};
+use rust_kratos::application::queries::QueryHandler;
+use rust_kratos::application::queries::get_current_user::{
+    GetCurrentUserQuery, GetCurrentUserQueryHandler,
+};
+use rust_kratos::domain::ports::inbound::recovery::RecoveryRequest;
+use rust_kratos::domain::ports::inbound::registration::RegistrationData;
+use rust_kratos::domain::ports::inbound::settings::SettingsData;
+use rust_kratos::domain::ports::outbound::session::SessionPort;
+use rust_kratos::domain::value_objects::email::Email;
+use rust_kratos::domain::value_objects::password::Password;
+use rust_kratos::infrastructure::adapters::kratos::http::{
+    identity::KratosIdentityAdapter, login::KratosAuthenticationAdapter,
+    logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
+    register::KratosRegistrationAdapter, settings::KratosSettingsAdapter,
+};
+use std::sync::Arc;
+
+#[path = "../common/mod.rs"]
+mod common;
+use common::TestContext;
+
+fn make_session_adapter(ctx: &TestContext) -> Arc<dyn SessionPort> {
+    Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None))
+}
+
+fn make_register_handler(ctx: &TestContext) -> RegisterCommandHandler {
+    RegisterCommandHandler::new(Arc::new(KratosRegistrationAdapter::new(ctx.client.clone())))
+}
+
+fn make_login_handler(ctx: &TestContext) -> LoginCommandHandler {
+    LoginCommandHandler::new(Arc::new(KratosAuthenticationAdapter::new(
+        ctx.client.clone(),
+        make_session_adapter(ctx),
+    )))
+}
+
+fn make_logout_handler(ctx: &TestContext) -> LogoutCommandHandler {
+    LogoutCommandHandler::new(make_session_adapter(ctx))
+}
+
+fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandler {
+    GetCurrentUserQueryHandler::new(Arc::new(KratosIdentityAdapter::new(
+        ctx.client.clone(),
+        None,
+        0,
+    )))
+}
+
+fn make_recovery_handler(ctx: &TestContext) -> RecoveryCommandHandler {
+    RecoveryCommandHandler::new(Arc::new(KratosRecoveryAdapter::new(ctx.client.clone())))
+}
+
+fn make_settings_handler(ctx: &TestContext) -> UpdateSettingsCommandHandler {
+    UpdateSettingsCommandHandler::new(Arc::new(KratosSettingsAdapter::new(ctx.client.clone())))
+}
+
+async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> String {
+    let handler = make_register_handler(ctx);
+    let result = handler
+        .handle(RegisterCommand {
+            data: RegistrationData {
+                email: Email::new(email).unwrap(),
+                password: Password::new(password).unwrap(),
+                username: format!("user_{}", uuid::Uuid::new_v4()),
+                geo_location: None,
+            },
+        })
+        .await
+        .unwrap();
+    result.session_cookie
+}
+
+#[tokio::test]
+async fn test_register_command_returns_session_cookie() {
+    let ctx = TestContext::new();
+    let handler = make_register_handler(&ctx);
+    let result = handler
+        .handle(RegisterCommand {
+            data: RegistrationData {
+                email: Email::new(&TestContext::random_email()).unwrap(),
+                password: Password::new("Test1234!@#$").unwrap(),
+                username: format!("user_{}", uuid::Uuid::new_v4()),
+                geo_location: None,
+            },
+        })
+        .await;
+    assert!(result.is_ok());
+    let r = result.unwrap();
+    assert!(!r.session_cookie.is_empty());
+    assert!(!r.flow_id.is_empty());
+}
+
+#[tokio::test]
+async fn test_login_command_returns_session_cookie() {
+    let ctx = TestContext::new();
+    let email = TestContext::random_email();
+    let password = "Test1234!@#$";
+    register_and_login(&ctx, &email, password).await;
+    let handler = make_login_handler(&ctx);
+    let result = handler
+        .handle(LoginCommand {
+            credentials: rust_kratos::domain::ports::inbound::login::LoginCredentials {
+                identifier: Email::new(&email).unwrap(),
+                password: Password::new(password).unwrap(),
+                address: None,
+                code: None,
+                resend: None,
+            },
+            cookie: None,
+        })
+        .await;
+    assert!(result.is_ok());
+    assert!(!result.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn test_login_command_with_invalid_credentials_fails() {
+    let ctx = TestContext::new();
+    let handler = make_login_handler(&ctx);
+    let result = handler
+        .handle(LoginCommand {
+            credentials: rust_kratos::domain::ports::inbound::login::LoginCredentials {
+                identifier: Email::new("nonexistent@example.com").unwrap(),
+                password: Password::new("wrongpassword").unwrap(),
+                address: None,
+                code: None,
+                resend: None,
+            },
+            cookie: None,
+        })
+        .await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_logout_command_without_cookie_fails() {
+    let ctx = TestContext::new();
+    let handler = make_logout_handler(&ctx);
+    let result = handler.handle(LogoutCommand { cookie: None }).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_logout_command_with_valid_session() {
+    let ctx = TestContext::new();
+    let email = TestContext::random_email();
+    let password = "Test1234!@#$";
+    let cookie = register_and_login(&ctx, &email, password).await;
+    let handler = make_logout_handler(&ctx);
+    let result = handler
+        .handle(LogoutCommand {
+            cookie: Some(cookie),
+        })
+        .await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_current_user_without_cookie_fails() {
+    let ctx = TestContext::new();
+    let handler = make_get_current_user_handler(&ctx);
+    let result = handler.handle(GetCurrentUserQuery { cookie: None }).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_get_current_user_with_valid_session() {
+    let ctx = TestContext::new();
+    let email = TestContext::random_email();
+    let password = "Test1234!@#$";
+    let cookie = register_and_login(&ctx, &email, password).await;
+    let handler = make_get_current_user_handler(&ctx);
+    let result = handler
+        .handle(GetCurrentUserQuery {
+            cookie: Some(cookie),
+        })
+        .await;
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().email, email);
+}
+
+#[tokio::test]
+async fn test_recovery_command_with_valid_email() {
+    let ctx = TestContext::new();
+    let email = TestContext::random_email();
+    let password = "Test1234!@#$";
+    register_and_login(&ctx, &email, password).await;
+    let handler = make_recovery_handler(&ctx);
+    let result = handler
+        .handle(RecoveryCommand {
+            request: RecoveryRequest {
+                email: Email::new(&email).unwrap(),
+            },
+            cookie: None,
+        })
+        .await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_recovery_command_with_unknown_email() {
+    let ctx = TestContext::new();
+    let handler = make_recovery_handler(&ctx);
+    let result = handler
+        .handle(RecoveryCommand {
+            request: RecoveryRequest {
+                email: Email::new("ghost@example.com").unwrap(),
+            },
+            cookie: None,
+        })
+        .await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_update_settings_command_without_session_fails() {
+    let ctx = TestContext::new();
+    let handler = make_settings_handler(&ctx);
+    let result = handler
+        .handle(UpdateSettingsCommand {
+            data: SettingsData {
+                method: "password".to_string(),
+                password: Some(Password::new("NewPass1234!").unwrap()),
+                traits: None,
+                lookup_secret_confirm: None,
+                lookup_secret_disable: None,
+                lookup_secret_regenerate: None,
+                lookup_secret_reveal: None,
+                transient_payload: None,
+            },
+            cookie: "invalid_cookie".to_string(),
+        })
+        .await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_update_settings_command_with_valid_session() {
+    let ctx = TestContext::new();
+    let email = TestContext::random_email();
+    let password = "Test1234!@#$";
+    let cookie = register_and_login(&ctx, &email, password).await;
+    let handler = make_settings_handler(&ctx);
+    let result = handler
+        .handle(UpdateSettingsCommand {
+            data: SettingsData {
+                method: "password".to_string(),
+                password: Some(Password::new("NewPass5678!@#$").unwrap()),
+                traits: None,
+                lookup_secret_confirm: None,
+                lookup_secret_disable: None,
+                lookup_secret_regenerate: None,
+                lookup_secret_reveal: None,
+                transient_payload: None,
+            },
+            cookie,
+        })
+        .await;
+    assert!(result.is_err());
+}

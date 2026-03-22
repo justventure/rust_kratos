@@ -1,0 +1,17 @@
+services:
+  rust-kratos:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: rust_kratos
+    ports:
+      - "8080:8080"
+    networks:
+      - kratos-network
+    restart: unless-stopped
+    environment:
+      APP_ENV: docker_local
+networks:
+  kratos-network:
+    external: true
+    name: kratos-network
