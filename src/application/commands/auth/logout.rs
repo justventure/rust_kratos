@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::outbound::session::SessionPort;
-use async_trait::async_trait;
-use std::sync::Arc;
 
 pub struct LogoutCommand {
     pub cookie: Option<String>,

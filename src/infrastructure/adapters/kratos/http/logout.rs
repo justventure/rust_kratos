@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use reqwest::{StatusCode, header};
+
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::outbound::identity::IdentityPort;
 use crate::domain::ports::outbound::session::SessionPort;
 use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
-use async_trait::async_trait;
-use reqwest::{StatusCode, header};
-use std::sync::Arc;
 
 pub struct KratosSessionAdapter {
     client: Arc<KratosClient>,
@@ -41,9 +43,7 @@ impl KratosSessionAdapter {
                 return Err(AuthError::NotAuthenticated.into());
             }
             StatusCode::TOO_MANY_REQUESTS => {
-                return Err(DomainError::ServiceUnavailable(
-                    "Rate limit exceeded".into(),
-                ));
+                return Err(DomainError::ServiceUnavailable("Rate limit exceeded".into()));
             }
             s if !s.is_success() => {
                 return Err(DomainError::ServiceUnavailable(format!(
@@ -90,9 +90,7 @@ impl SessionPort for KratosSessionAdapter {
 
         let result = match response.status() {
             s if s.is_success() || s == StatusCode::FOUND || s == StatusCode::SEE_OTHER => Ok(()),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(AuthError::NotAuthenticated.into())
-            }
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(AuthError::NotAuthenticated.into()),
             s => {
                 let error_text = response.text().await.unwrap_or_else(|_| s.to_string());
                 Err(DomainError::ServiceUnavailable(format!(
@@ -102,12 +100,11 @@ impl SessionPort for KratosSessionAdapter {
             }
         };
 
-        if result.is_ok() {
-            if let Some(cache) = &self.cache {
-                if let Some(token) = Self::extract_session_token(cookie) {
-                    cache.delete(&format!("user_profile:{}", token)).await;
-                }
-            }
+        if result.is_ok()
+            && let Some(cache) = &self.cache
+            && let Some(token) = Self::extract_session_token(cookie)
+        {
+            cache.delete(&format!("user_profile:{}", token)).await;
         }
 
         result
@@ -117,10 +114,7 @@ impl SessionPort for KratosSessionAdapter {
         let Some(cookie_value) = cookie else {
             return false;
         };
-        self.identity_adapter
-            .get_current_user(cookie_value)
-            .await
-            .is_ok()
+        self.identity_adapter.get_current_user(cookie_value).await.is_ok()
     }
 
     async fn is_recovery_session(&self, cookie: Option<&str>) -> bool {
@@ -128,14 +122,7 @@ impl SessionPort for KratosSessionAdapter {
 
         let url = format!("{}/sessions/whoami", self.client.public_url);
 
-        let Ok(response) = self
-            .client
-            .client
-            .get(&url)
-            .header(header::COOKIE, cookie)
-            .send()
-            .await
-        else {
+        let Ok(response) = self.client.client.get(&url).header(header::COOKIE, cookie).send().await else {
             return false;
         };
 
@@ -147,8 +134,7 @@ impl SessionPort for KratosSessionAdapter {
             .as_array()
             .map(|methods| {
                 methods.iter().any(|m| {
-                    m["method"].as_str() == Some("link_recovery")
-                        || m["method"].as_str() == Some("code_recovery")
+                    m["method"].as_str() == Some("link_recovery") || m["method"].as_str() == Some("code_recovery")
                 })
             })
             .unwrap_or(false)

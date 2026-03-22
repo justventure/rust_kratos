@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use reqwest::header;
+
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::outbound::identity::IdentityPort;
 use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::models::identity::SessionResponse;
-use async_trait::async_trait;
-use reqwest::header;
-use std::sync::Arc;
 
 pub struct KratosIdentityAdapter {
     client: Arc<KratosClient>,
@@ -38,16 +40,14 @@ impl IdentityPort for KratosIdentityAdapter {
 
         let cache_key = format!("user_profile:{}", session_token);
 
-        if let Some(cache) = &self.cache {
-            if let Some(cached) = cache.get(&cache_key).await {
-                if let Ok(profile) = serde_json::from_str(&cached) {
-                    return Ok(profile);
-                }
-            }
+        if let Some(cache) = &self.cache
+            && let Some(cached) = cache.get(&cache_key).await
+            && let Ok(profile) = serde_json::from_str(&cached)
+        {
+            return Ok(profile);
         }
 
-        let url =
-            format!("{}/sessions/whoami", self.client.public_url).replace("localhost", "127.0.0.1");
+        let url = format!("{}/sessions/whoami", self.client.public_url).replace("localhost", "127.0.0.1");
 
         let response = self
             .client
@@ -70,12 +70,10 @@ impl IdentityPort for KratosIdentityAdapter {
         let profile: crate::domain::entities::user_profile::UserProfile =
             (session.identity, session.active, session.expires_at).into();
 
-        if let Some(cache) = &self.cache {
-            if let Ok(serialized) = serde_json::to_string(&profile) {
-                cache
-                    .set_ex(&cache_key, &serialized, self.cache_ttl_secs)
-                    .await;
-            }
+        if let Some(cache) = &self.cache
+            && let Ok(serialized) = serde_json::to_string(&profile)
+        {
+            cache.set_ex(&cache_key, &serialized, self.cache_ttl_secs).await;
         }
 
         Ok(profile)

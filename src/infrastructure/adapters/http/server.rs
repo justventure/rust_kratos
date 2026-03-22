@@ -1,18 +1,27 @@
-use crate::application::bootstrap::config::ServerConfig;
-use crate::infrastructure::adapters::http::swagger;
-use crate::infrastructure::di::container::AppContainer;
-use crate::presentation::api::rest::health_check;
-use crate::presentation::api::rest::middleware::cookies::CookieMiddleware;
-use crate::presentation::api::rest::v1::handlers;
+use std::sync::Arc;
+
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, http, web};
 use actix_web_prometheus::PrometheusMetricsBuilder;
 use anyhow::Context;
-use std::sync::Arc;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
 
-pub async fn start(config: ServerConfig, container: Arc<AppContainer>) -> anyhow::Result<()> {
+use crate::infrastructure::adapters::http::docs::swagger;
+use crate::infrastructure::di::container::AppContainer;
+use crate::presentation::api::rest::health_check;
+use crate::presentation::api::rest::middleware::cookies::CookieMiddleware;
+use crate::presentation::api::rest::v1::handlers;
+
+#[derive(Debug, Clone)]
+pub struct HttpServerConfig {
+    pub host: String,
+    pub port: u16,
+    pub cors_max_age: usize,
+    pub cors_allowed_origins: Vec<String>,
+}
+
+pub async fn start(config: HttpServerConfig, container: Arc<AppContainer>) -> anyhow::Result<()> {
     let bind_address = format!("{}:{}", config.host, config.port);
     info!("Booting HTTP server at http://{}", bind_address);
 
@@ -60,10 +69,7 @@ pub async fn start(config: ServerConfig, container: Arc<AppContainer>) -> anyhow
     .bind(&bind_address_clone)
     .with_context(|| format!("Failed to bind server to {}", bind_address_clone))?;
 
-    info!(
-        "✅ HTTP server successfully started on http://{}",
-        bind_address
-    );
+    info!("✅ HTTP server successfully started on http://{}", bind_address);
     info!("📊 Prometheus Metrics: http://{}/metrics", bind_address);
 
     server

@@ -1,11 +1,12 @@
-use crate::domain::ports::{
-    inbound::{
-        login::AuthenticationPort, recovery::RecoveryPort, registration::RegistrationPort,
-        settings::SettingsPort, verification::VerificationPort,
-    },
-    outbound::{identity::IdentityPort, session::SessionPort},
-};
 use std::sync::Arc;
+
+use crate::domain::ports::inbound::login::AuthenticationPort;
+use crate::domain::ports::inbound::recovery::RecoveryPort;
+use crate::domain::ports::inbound::registration::RegistrationPort;
+use crate::domain::ports::inbound::settings::SettingsPort;
+use crate::domain::ports::inbound::verification::VerificationPort;
+use crate::domain::ports::outbound::identity::IdentityPort;
+use crate::domain::ports::outbound::session::SessionPort;
 
 pub trait AdapterFactory: Send + Sync {
     fn create_registration_adapter(&self) -> Arc<dyn RegistrationPort>;

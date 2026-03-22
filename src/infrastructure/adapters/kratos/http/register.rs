@@ -1,3 +1,9 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use reqwest::StatusCode;
+use tracing::error;
+
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
 use crate::domain::ports::outbound::session::SessionPort;
@@ -6,10 +12,6 @@ use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::registration::RegistrationPayload;
-use async_trait::async_trait;
-use reqwest::StatusCode;
-use std::sync::Arc;
-use tracing::error;
 
 pub struct KratosRegistrationAdapter {
     client: Arc<KratosClient>,
@@ -25,9 +27,7 @@ impl KratosRegistrationAdapter {
 fn map_registration_error(e: KratosFlowError) -> DomainError {
     match (e.status, e.message_id()) {
         (StatusCode::BAD_REQUEST, 4000007) => DomainError::Conflict("Email already exists".into()),
-        (StatusCode::BAD_REQUEST, 4000010) => {
-            DomainError::InvalidData("Password is too weak".into())
-        }
+        (StatusCode::BAD_REQUEST, 4000010) => DomainError::InvalidData("Password is too weak".into()),
         (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
         (StatusCode::GONE, _) => DomainError::NotFound("registration flow".into()),
         _ => DomainError::ServiceUnavailable(e.to_string()),
@@ -42,30 +42,16 @@ impl RegistrationPort for KratosRegistrationAdapter {
             error!("Registration attempt with an already active session");
             return Err(AuthError::AlreadyLoggedIn.into());
         }
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "registration",
-            cookie,
-        )
-        .await
-        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+        let flow = fetch_flow(&self.client.client, &self.client.public_url, "registration", cookie)
+            .await
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
         Ok(flow.flow_id.as_str().to_string())
     }
 
-    async fn complete_registration(
-        &self,
-        _flow_id: &str,
-        data: RegistrationData,
-    ) -> Result<String, DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "registration",
-            None,
-        )
-        .await
-        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+    async fn complete_registration(&self, _flow_id: &str, data: RegistrationData) -> Result<String, DomainError> {
+        let flow = fetch_flow(&self.client.client, &self.client.public_url, "registration", None)
+            .await
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
         let payload = RegistrationPayload::from_data(data, flow.csrf_token.clone());
         let result = post_flow(
             &self.client.client,

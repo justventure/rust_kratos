@@ -1,8 +1,9 @@
+use std::sync::Arc;
+
 use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
-use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -75,14 +76,9 @@ async fn register_and_login(ctx: &TestContext) -> String {
     let password = "Test1234!@#$";
     let username = format!("user_{}", uuid::Uuid::new_v4());
 
-    let flow = fetch_flow(
-        &ctx.client.client,
-        &ctx.client.public_url,
-        "registration",
-        None,
-    )
-    .await
-    .unwrap();
+    let flow = fetch_flow(&ctx.client.client, &ctx.client.public_url, "registration", None)
+        .await
+        .unwrap();
 
     let payload = RegistrationPayload {
         method: AuthMethod::Password,
@@ -105,8 +101,7 @@ async fn register_and_login(ctx: &TestContext) -> String {
     .await
     .unwrap();
 
-    let session: Arc<dyn SessionPort> =
-        Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
+    let session: Arc<dyn SessionPort> = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone(), session);
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {

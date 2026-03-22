@@ -1,6 +1,19 @@
-use crate::application::bootstrap::config::KratosConfig;
-use reqwest::Client;
 use std::time::Duration;
+
+use reqwest::Client;
+
+#[derive(Debug, Clone)]
+pub struct KratosClientConfig {
+    pub admin_url: String,
+    pub public_url: String,
+    pub timeout_secs: u64,
+    pub connect_timeout_secs: u64,
+    pub pool_idle_timeout_secs: u64,
+    pub pool_max_idle_per_host: usize,
+    pub max_retries: u32,
+    pub retry_delay_ms: u64,
+    pub accept_invalid_certs: bool,
+}
 
 #[derive(Clone)]
 pub struct KratosClient {
@@ -12,7 +25,7 @@ pub struct KratosClient {
 }
 
 impl KratosClient {
-    pub fn new(config: &KratosConfig) -> Self {
+    pub fn new(config: &KratosClientConfig) -> Self {
         let client = Client::builder()
             .cookie_store(false)
             .redirect(reqwest::redirect::Policy::none())
@@ -77,24 +90,20 @@ impl KratosClient {
         E: std::fmt::Display,
     {
         let mut attempts = 0;
-
         loop {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     attempts += 1;
-
                     if attempts >= self.max_retries {
                         return Err(e);
                     }
-
                     tracing::warn!(
                         attempt = attempts,
                         max = self.max_retries,
                         error = %e,
                         "Request failed, retrying in {:?}", self.retry_delay
                     );
-
                     tokio::time::sleep(self.retry_delay).await;
                 }
             }

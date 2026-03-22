@@ -1,31 +1,25 @@
+use std::sync::Arc;
+
 use rust_kratos::application::commands::CommandHandler;
-use rust_kratos::application::commands::account::recovery::{
-    RecoveryCommand, RecoveryCommandHandler,
-};
-use rust_kratos::application::commands::account::settings::{
-    UpdateSettingsCommand, UpdateSettingsCommandHandler,
-};
+use rust_kratos::application::commands::account::recovery::{RecoveryCommand, RecoveryCommandHandler};
+use rust_kratos::application::commands::account::settings::{UpdateSettingsCommand, UpdateSettingsCommandHandler};
 use rust_kratos::application::commands::auth::login::{LoginCommand, LoginCommandHandler};
 use rust_kratos::application::commands::auth::logout::{LogoutCommand, LogoutCommandHandler};
-use rust_kratos::application::commands::identity::register::{
-    RegisterCommand, RegisterCommandHandler,
-};
+use rust_kratos::application::commands::identity::register::{RegisterCommand, RegisterCommandHandler};
 use rust_kratos::application::queries::QueryHandler;
-use rust_kratos::application::queries::get_current_user::{
-    GetCurrentUserQuery, GetCurrentUserQueryHandler,
-};
+use rust_kratos::application::queries::get_current_user::{GetCurrentUserQuery, GetCurrentUserQueryHandler};
 use rust_kratos::domain::ports::inbound::recovery::RecoveryRequest;
 use rust_kratos::domain::ports::inbound::registration::RegistrationData;
 use rust_kratos::domain::ports::inbound::settings::SettingsData;
 use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
-use rust_kratos::infrastructure::adapters::kratos::http::{
-    identity::KratosIdentityAdapter, login::KratosAuthenticationAdapter,
-    logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
-    register::KratosRegistrationAdapter, settings::KratosSettingsAdapter,
-};
-use std::sync::Arc;
+use rust_kratos::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::settings::KratosSettingsAdapter;
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -54,11 +48,7 @@ fn make_logout_handler(ctx: &TestContext) -> LogoutCommandHandler {
 }
 
 fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandler {
-    GetCurrentUserQueryHandler::new(Arc::new(KratosIdentityAdapter::new(
-        ctx.client.clone(),
-        None,
-        0,
-    )))
+    GetCurrentUserQueryHandler::new(Arc::new(KratosIdentityAdapter::new(ctx.client.clone(), None, 0)))
 }
 
 fn make_recovery_handler(ctx: &TestContext) -> RecoveryCommandHandler {
@@ -164,11 +154,7 @@ async fn test_logout_command_with_valid_session() {
     let password = "Test1234!@#$";
     let cookie = register_and_login(&ctx, &email, password).await;
     let handler = make_logout_handler(&ctx);
-    let result = handler
-        .handle(LogoutCommand {
-            cookie: Some(cookie),
-        })
-        .await;
+    let result = handler.handle(LogoutCommand { cookie: Some(cookie) }).await;
     assert!(result.is_ok());
 }
 
@@ -187,11 +173,7 @@ async fn test_get_current_user_with_valid_session() {
     let password = "Test1234!@#$";
     let cookie = register_and_login(&ctx, &email, password).await;
     let handler = make_get_current_user_handler(&ctx);
-    let result = handler
-        .handle(GetCurrentUserQuery {
-            cookie: Some(cookie),
-        })
-        .await;
+    let result = handler.handle(GetCurrentUserQuery { cookie: Some(cookie) }).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap().email, email);
 }

@@ -1,5 +1,6 @@
-use crate::domain::value_objects::flow_id::FlowId;
 use serde_json::Value;
+
+use crate::domain::value_objects::flow_id::FlowId;
 
 #[derive(Debug, Clone)]
 pub struct FlowResult {

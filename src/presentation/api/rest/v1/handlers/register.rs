@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
 use crate::application::commands::identity::register::RegisterCommand;
 use crate::domain::errors::{AuthError, DomainError};
@@ -7,8 +11,6 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::dto::auth::RegisterDto;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::RegisterSchema;
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -46,9 +48,7 @@ pub async fn register(
                 .add(result.session_cookie);
             HttpResponse::Created().finish()
         }
-        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => {
-            HttpResponse::Conflict().body("Already logged in")
-        }
+        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => HttpResponse::Conflict().body("Already logged in"),
         Err(DomainError::Conflict(msg)) => HttpResponse::Conflict().body(msg),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),

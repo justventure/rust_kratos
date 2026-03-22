@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
 use crate::application::queries::QueryHandler;
 use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::outbound::identity::IdentityPort;
-use async_trait::async_trait;
-use std::sync::Arc;
 
 pub struct GetCurrentUserQuery {
     pub cookie: Option<String>,

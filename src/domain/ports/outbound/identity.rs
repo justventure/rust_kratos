@@ -1,6 +1,7 @@
+use async_trait::async_trait;
+
 use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::DomainError;
-use async_trait::async_trait;
 
 #[async_trait]
 pub trait IdentityPort: Send + Sync {

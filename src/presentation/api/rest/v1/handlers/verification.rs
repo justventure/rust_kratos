@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::verification::{
     SendVerificationCodeCommand, SubmitVerificationCodeCommand, VerifyByLinkCommand,
@@ -12,8 +16,6 @@ use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::{
     SendVerificationCodeSchema, SubmitVerificationCodeSchema, VerifyByLinkSchema,
 };
-use actix_web::{HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -41,9 +43,7 @@ pub async fn verify_by_link(
     };
     match use_cases.commands.verification.handle(command).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
@@ -75,9 +75,7 @@ pub async fn send_verification_code(
     };
     match use_cases.commands.verification.handle(command).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
@@ -103,8 +101,7 @@ pub async fn submit_verification_code(
     let cookie = match extract_cookie(&req) {
         Some(c) => c,
         None => {
-            return HttpResponse::BadRequest()
-                .body("Cookie is required to submit verification code");
+            return HttpResponse::BadRequest().body("Cookie is required to submit verification code");
         }
     };
     let command = SubmitVerificationCodeCommand {
@@ -113,9 +110,7 @@ pub async fn submit_verification_code(
     };
     match use_cases.commands.verification.handle(command).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(DomainError::NotFound(msg)) => HttpResponse::NotFound().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),

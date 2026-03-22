@@ -1,3 +1,9 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use reqwest::StatusCode;
+use tracing::{debug, error};
+
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
 use crate::domain::ports::outbound::session::SessionPort;
@@ -6,10 +12,6 @@ use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::login::LoginPayload;
-use async_trait::async_trait;
-use reqwest::StatusCode;
-use std::sync::Arc;
-use tracing::{debug, error};
 
 pub struct KratosAuthenticationAdapter {
     client: Arc<KratosClient>,
@@ -51,11 +53,7 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         Ok(flow.flow_id.as_str().to_string())
     }
 
-    async fn complete_login(
-        &self,
-        _flow_id: &str,
-        credentials: LoginCredentials,
-    ) -> Result<String, DomainError> {
+    async fn complete_login(&self, _flow_id: &str, credentials: LoginCredentials) -> Result<String, DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;

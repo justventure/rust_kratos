@@ -1,17 +1,16 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
 use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::DomainError;
 use crate::domain::ports::inbound::login::LoginCredentials;
 use crate::domain::ports::inbound::recovery::RecoveryRequest;
 use crate::domain::ports::inbound::registration::RegistrationData;
 use crate::domain::ports::inbound::settings::SettingsData;
-use crate::domain::ports::inbound::verification::{
-    SendCodeRequest, SubmitCodeRequest, VerifyByLinkRequest,
-};
+use crate::domain::ports::inbound::verification::{SendCodeRequest, SubmitCodeRequest, VerifyByLinkRequest};
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::password::Password;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Deserialize)]
 pub struct RegisterDto {

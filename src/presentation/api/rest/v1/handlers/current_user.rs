@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse, web};
+
 use crate::application::queries::QueryHandler;
 use crate::application::queries::get_current_user::GetCurrentUserQuery;
 use crate::domain::errors::{AuthError, DomainError};
@@ -5,8 +9,6 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::dto::auth::UserProfileResponse;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::UserProfileSchema;
-use actix_web::{HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     get,
@@ -25,12 +27,8 @@ pub async fn current_user(req: HttpRequest, use_cases: web::Data<Arc<UseCases>>)
     };
     match use_cases.queries.get_current_user.handle(query).await {
         Ok(profile) => HttpResponse::Ok().json(UserProfileResponse::from(profile)),
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
-        Err(DomainError::Auth(AuthError::SessionExpired)) => {
-            HttpResponse::Unauthorized().body("Session expired")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
+        Err(DomainError::Auth(AuthError::SessionExpired)) => HttpResponse::Unauthorized().body("Session expired"),
         Err(DomainError::Auth(AuthError::Forbidden)) => HttpResponse::Forbidden().body("Forbidden"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }

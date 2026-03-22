@@ -1,6 +1,7 @@
+use async_trait::async_trait;
+
 use crate::domain::errors::DomainError;
 use crate::domain::value_objects::password::Password;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct SettingsData {

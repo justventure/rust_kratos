@@ -1,18 +1,18 @@
+use std::sync::Arc;
+
 use rust_kratos::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
 use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
-use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
 
 fn make_auth_adapter(ctx: &TestContext) -> KratosAuthenticationAdapter {
-    let session: Arc<dyn SessionPort> =
-        Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
+    let session: Arc<dyn SessionPort> = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
     KratosAuthenticationAdapter::new(ctx.client.clone(), session)
 }
 
@@ -92,14 +92,9 @@ async fn register_user(ctx: &TestContext, email: &str, password: &str) {
         csrf_token: String,
     }
 
-    let flow = fetch_flow(
-        &ctx.client.client,
-        &ctx.client.public_url,
-        "registration",
-        None,
-    )
-    .await
-    .unwrap();
+    let flow = fetch_flow(&ctx.client.client, &ctx.client.public_url, "registration", None)
+        .await
+        .unwrap();
 
     let payload = RegistrationPayload {
         method: AuthMethod::Password,

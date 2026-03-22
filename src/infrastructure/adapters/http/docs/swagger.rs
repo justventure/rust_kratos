@@ -1,10 +1,11 @@
-use crate::presentation::api::rest::v1::schema::auth::{
-    LoginSchema, RecoverySchema, RegisterSchema, SendVerificationCodeSchema,
-    SubmitVerificationCodeSchema, UpdateSettingsSchema, UserProfileSchema, VerifyByLinkSchema,
-};
 use actix_web::{HttpResponse, Responder, get, web};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+
+use crate::presentation::api::rest::v1::schema::auth::{
+    LoginSchema, RecoverySchema, RegisterSchema, SendVerificationCodeSchema, SubmitVerificationCodeSchema,
+    UpdateSettingsSchema, UserProfileSchema, VerifyByLinkSchema,
+};
 
 const OPENAPI_JSON_PATH: &str = "/api-docs/v1/openapi.json";
 const SWAGGER_UI_PATH: &str = "/v1/swagger-ui/{_:.*}";

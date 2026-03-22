@@ -1,5 +1,6 @@
-use crate::domain::entities::user_profile::UserProfile;
 use chrono::{DateTime, Utc};
+
+use crate::domain::entities::user_profile::UserProfile;
 
 #[derive(serde::Deserialize)]
 pub struct SessionResponse {

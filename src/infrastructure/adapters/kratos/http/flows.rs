@@ -1,7 +1,8 @@
+use reqwest::{Client, StatusCode, header};
+
 use crate::domain::value_objects::flow_id::FlowId;
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::flows::{FlowResult, PostFlowResult};
-use reqwest::{Client, StatusCode, header};
 
 pub async fn fetch_flow(
     client: &Client,
@@ -9,8 +10,7 @@ pub async fn fetch_flow(
     endpoint: &str,
     cookie: Option<&str>,
 ) -> Result<FlowResult, Box<dyn std::error::Error>> {
-    let url = format!("{}/self-service/{}/browser", public_url, endpoint)
-        .replace("localhost", "127.0.0.1");
+    let url = format!("{}/self-service/{}/browser", public_url, endpoint).replace("localhost", "127.0.0.1");
 
     let mut request = client.get(&url);
     if let Some(cookie_value) = cookie {
@@ -33,11 +33,7 @@ pub async fn fetch_flow(
 
     if !status.is_success() {
         let error_text = response.text().await.unwrap_or_default();
-        return Err(format!(
-            "Failed to fetch {} flow (status {}): {}",
-            endpoint, status, error_text
-        )
-        .into());
+        return Err(format!("Failed to fetch {} flow (status {}): {}", endpoint, status, error_text).into());
     }
 
     let flow: serde_json::Value = response
@@ -65,13 +61,8 @@ pub async fn post_flow(
     data: serde_json::Value,
     cookies: &[String],
 ) -> Result<PostFlowResult, KratosFlowError> {
-    let url = format!(
-        "{}/self-service/{}?flow={}",
-        public_url,
-        endpoint,
-        flow_id.as_str()
-    )
-    .replace("localhost", "127.0.0.1");
+    let url =
+        format!("{}/self-service/{}?flow={}", public_url, endpoint, flow_id.as_str()).replace("localhost", "127.0.0.1");
 
     let response = client
         .post(&url)
@@ -174,11 +165,7 @@ async fn handle_redirect(
     if !flow_response.status().is_success() {
         let status = flow_response.status();
         let error_text = flow_response.text().await.unwrap_or_default();
-        return Err(format!(
-            "Failed to fetch {} flow (status {}): {}",
-            endpoint, status, error_text
-        )
-        .into());
+        return Err(format!("Failed to fetch {} flow (status {}): {}", endpoint, status, error_text).into());
     }
 
     let flow: serde_json::Value = flow_response

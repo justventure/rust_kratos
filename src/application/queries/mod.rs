@@ -1,5 +1,6 @@
-use crate::domain::errors::DomainError;
 use async_trait::async_trait;
+
+use crate::domain::errors::DomainError;
 
 #[async_trait]
 pub trait QueryHandler<Q, R>: Send + Sync {

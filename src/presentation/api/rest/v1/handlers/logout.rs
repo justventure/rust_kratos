@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::logout::LogoutCommand;
 use crate::domain::errors::{AuthError, DomainError};
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
-use actix_web::{HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     get,
@@ -21,12 +23,8 @@ pub async fn logout(req: HttpRequest, use_cases: web::Data<Arc<UseCases>>) -> Ht
     };
     match use_cases.commands.logout.handle(command).await {
         Ok(_) => HttpResponse::NoContent().finish(),
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
-        Err(DomainError::Auth(AuthError::SessionExpired)) => {
-            HttpResponse::Unauthorized().body("Session expired")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
+        Err(DomainError::Auth(AuthError::SessionExpired)) => HttpResponse::Unauthorized().body("Session expired"),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

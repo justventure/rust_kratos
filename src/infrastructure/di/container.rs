@@ -1,21 +1,23 @@
-use crate::application::bootstrap::config::Config;
-use crate::application::commands::{
-    account::{
-        recovery::RecoveryCommandHandler, settings::UpdateSettingsCommandHandler,
-        verification::VerificationCommandHandler,
-    },
-    auth::{login::LoginCommandHandler, logout::LogoutCommandHandler},
-    identity::register::RegisterCommandHandler,
-};
-use crate::application::queries::get_current_user::GetCurrentUserQueryHandler;
-use crate::infrastructure::di::adapter_factory::AdapterFactory;
-use crate::infrastructure::{
-    adapters::cache::redis_cache::RedisCache, adapters::kratos::client::KratosClient,
-    di::factory::KratosAdapterFactory,
-};
 use std::sync::Arc;
-use std::time::Duration;
+
 use thiserror::Error;
+
+use crate::application::commands::account::recovery::RecoveryCommandHandler;
+use crate::application::commands::account::settings::UpdateSettingsCommandHandler;
+use crate::application::commands::account::verification::VerificationCommandHandler;
+use crate::application::commands::auth::login::LoginCommandHandler;
+use crate::application::commands::auth::logout::LogoutCommandHandler;
+use crate::application::commands::identity::register::RegisterCommandHandler;
+use crate::application::queries::get_current_user::GetCurrentUserQueryHandler;
+use crate::infrastructure::adapters::cache::redis_cache::{RedisCache, RedisCacheConfig};
+use crate::infrastructure::adapters::kratos::client::{KratosClient, KratosClientConfig};
+use crate::infrastructure::di::adapter_factory::AdapterFactory;
+use crate::infrastructure::di::factory::KratosAdapterFactory;
+
+pub struct ContainerConfig {
+    pub kratos: KratosClientConfig,
+    pub redis: RedisCacheConfig,
+}
 
 pub struct Commands {
     pub login: LoginCommandHandler,
@@ -43,17 +45,11 @@ impl UseCases {
                 logout: LogoutCommandHandler::new(factory.create_session_adapter()),
                 register: RegisterCommandHandler::new(factory.create_registration_adapter()),
                 recovery: RecoveryCommandHandler::new(factory.create_recovery_adapter()),
-                update_settings: UpdateSettingsCommandHandler::new(
-                    factory.create_settings_adapter(),
-                ),
-                verification: VerificationCommandHandler::new(
-                    factory.create_verification_adapter(),
-                ),
+                update_settings: UpdateSettingsCommandHandler::new(factory.create_settings_adapter()),
+                verification: VerificationCommandHandler::new(factory.create_verification_adapter()),
             },
             queries: Queries {
-                get_current_user: GetCurrentUserQueryHandler::new(
-                    factory.create_identity_adapter(),
-                ),
+                get_current_user: GetCurrentUserQueryHandler::new(factory.create_identity_adapter()),
             },
         }
     }
@@ -67,25 +63,19 @@ pub struct AppContainer {
 }
 
 impl AppContainer {
-    pub async fn new(config: &Config) -> Result<Self, ContainerError> {
-        Self::validate_config(config)?;
+    pub async fn new(config: ContainerConfig) -> Result<Self, ContainerError> {
         let kratos = Arc::new(KratosClient::new(&config.kratos));
         kratos
             .wait_until_ready()
             .await
             .map_err(|e| ContainerError::Initialization(format!("Kratos unavailable: {e}")))?;
-        let cache = RedisCache::new_with_retry(
-            &config.redis.url,
-            config.redis.max_retries,
-            Duration::from_millis(config.redis.retry_delay_ms),
-        )
-        .await
-        .map_err(|e| ContainerError::Initialization(format!("Redis unavailable: {e}")))?;
-        let factory = KratosAdapterFactory::from_client(
-            kratos.clone(),
-            cache.clone(),
-            config.redis.cache_ttl_secs,
-        );
+
+        let cache = RedisCache::new_with_retry(&config.redis)
+            .await
+            .map_err(|e| ContainerError::Initialization(format!("Redis unavailable: {e}")))?;
+
+        let factory = KratosAdapterFactory::from_client(kratos.clone(), cache.clone(), config.redis.cache_ttl_secs);
+
         Ok(Self {
             use_cases: Arc::new(UseCases::new(&factory)),
             cache,
@@ -99,20 +89,6 @@ impl AppContainer {
 
     pub fn kratos_client(&self) -> Arc<KratosClient> {
         self.kratos.clone()
-    }
-
-    fn validate_config(config: &Config) -> Result<(), ContainerError> {
-        if config.kratos.public_url.is_empty() {
-            return Err(ContainerError::InvalidConfig(
-                "Kratos public URL cannot be empty".into(),
-            ));
-        }
-        if config.redis.url.is_empty() {
-            return Err(ContainerError::InvalidConfig(
-                "Redis URL cannot be empty".into(),
-            ));
-        }
-        Ok(())
     }
 }
 

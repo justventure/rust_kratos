@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
 use crate::domain::ports::inbound::settings::{SettingsData, SettingsPort};
-use async_trait::async_trait;
-use std::sync::Arc;
 
 pub struct UpdateSettingsCommand {
     pub data: SettingsData,
@@ -26,14 +28,8 @@ impl UpdateSettingsCommandHandler {
 
 #[async_trait]
 impl CommandHandler<UpdateSettingsCommand, UpdateSettingsResult> for UpdateSettingsCommandHandler {
-    async fn handle(
-        &self,
-        command: UpdateSettingsCommand,
-    ) -> Result<UpdateSettingsResult, DomainError> {
-        let flow_id = self
-            .settings_port
-            .initiate_settings(&command.cookie)
-            .await?;
+    async fn handle(&self, command: UpdateSettingsCommand) -> Result<UpdateSettingsResult, DomainError> {
+        let flow_id = self.settings_port.initiate_settings(&command.cookie).await?;
         let (flow_id, messages) = self
             .settings_port
             .update_settings(&flow_id, command.data, &command.cookie)

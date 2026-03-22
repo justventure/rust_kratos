@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::login::LoginCommand;
 use crate::domain::errors::{AuthError, DomainError};
@@ -7,8 +11,6 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::dto::auth::LoginDto;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::LoginSchema;
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -22,11 +24,7 @@ use std::sync::Arc;
         (status = 409, description = "Already logged in"),
     )
 )]
-pub async fn login(
-    req: HttpRequest,
-    use_cases: web::Data<Arc<UseCases>>,
-    dto: web::Json<LoginDto>,
-) -> HttpResponse {
+pub async fn login(req: HttpRequest, use_cases: web::Data<Arc<UseCases>>, dto: web::Json<LoginDto>) -> HttpResponse {
     let credentials: LoginCredentials = match dto.into_inner().try_into() {
         Ok(c) => c,
         Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
@@ -43,15 +41,11 @@ pub async fn login(
                 .add(session_token);
             HttpResponse::Ok().finish()
         }
-        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => {
-            HttpResponse::Conflict().body("Already logged in")
-        }
+        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => HttpResponse::Conflict().body("Already logged in"),
         Err(DomainError::Auth(AuthError::InvalidCredentials)) => {
             HttpResponse::Unauthorized().body("Invalid credentials")
         }
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }

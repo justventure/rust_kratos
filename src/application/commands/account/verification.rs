@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
 use crate::domain::ports::inbound::verification::{
     SendCodeRequest, SubmitCodeRequest, VerificationPort, VerifyByLinkRequest,
 };
-use async_trait::async_trait;
-use std::sync::Arc;
 
 pub struct VerifyByLinkCommand {
     pub request: VerifyByLinkRequest,

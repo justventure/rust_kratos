@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use reqwest::Client;
 use rust_kratos::domain::ports::inbound::recovery::{RecoveryPort, RecoveryRequest};
 use rust_kratos::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
@@ -6,7 +8,6 @@ use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
-use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;

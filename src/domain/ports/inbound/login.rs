@@ -1,7 +1,8 @@
+use async_trait::async_trait;
+
 use crate::domain::errors::DomainError;
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::password::Password;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct LoginCredentials {
@@ -15,9 +16,5 @@ pub struct LoginCredentials {
 #[async_trait]
 pub trait AuthenticationPort: Send + Sync {
     async fn initiate_login(&self, cookie: Option<&str>) -> Result<String, DomainError>;
-    async fn complete_login(
-        &self,
-        flow_id: &str,
-        credentials: LoginCredentials,
-    ) -> Result<String, DomainError>;
+    async fn complete_login(&self, flow_id: &str, credentials: LoginCredentials) -> Result<String, DomainError>;
 }

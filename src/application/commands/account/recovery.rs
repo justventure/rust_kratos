@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use tracing::{error, info};
+
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
 use crate::domain::ports::inbound::recovery::{RecoveryPort, RecoveryRequest};
-use async_trait::async_trait;
-use std::sync::Arc;
-use tracing::{error, info};
 
 pub struct RecoveryCommand {
     pub request: RecoveryRequest,

@@ -1,7 +1,8 @@
-use crate::domain::errors::DomainError;
-use crate::domain::value_objects::email::Email;
 use async_trait::async_trait;
 use serde_json::Value;
+
+use crate::domain::errors::DomainError;
+use crate::domain::value_objects::email::Email;
 
 #[derive(Debug, Clone)]
 pub struct VerifyByLinkRequest {
@@ -23,19 +24,7 @@ pub struct SubmitCodeRequest {
 
 #[async_trait]
 pub trait VerificationPort: Send + Sync {
-    async fn verify_by_link(
-        &self,
-        request: VerifyByLinkRequest,
-        cookie: Option<&str>,
-    ) -> Result<(), DomainError>;
-    async fn send_verification_code(
-        &self,
-        request: SendCodeRequest,
-        cookie: Option<&str>,
-    ) -> Result<(), DomainError>;
-    async fn submit_verification_code(
-        &self,
-        request: SubmitCodeRequest,
-        cookie: &str,
-    ) -> Result<(), DomainError>;
+    async fn verify_by_link(&self, request: VerifyByLinkRequest, cookie: Option<&str>) -> Result<(), DomainError>;
+    async fn send_verification_code(&self, request: SendCodeRequest, cookie: Option<&str>) -> Result<(), DomainError>;
+    async fn submit_verification_code(&self, request: SubmitCodeRequest, cookie: &str) -> Result<(), DomainError>;
 }

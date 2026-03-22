@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::recovery::RecoveryCommand;
 use crate::domain::errors::{AuthError, DomainError};
@@ -6,8 +10,6 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::dto::auth::RecoveryDto;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::RecoverySchema;
-use actix_web::{HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -36,9 +38,7 @@ pub async fn recovery(
     };
     match use_cases.commands.recovery.handle(command).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => {
-            HttpResponse::Conflict().body("Already logged in")
-        }
+        Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => HttpResponse::Conflict().body("Already logged in"),
         Err(DomainError::InvalidData(msg)) => HttpResponse::BadRequest().body(msg),
         Err(DomainError::NotFound(msg)) => HttpResponse::NotFound().body(msg),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),

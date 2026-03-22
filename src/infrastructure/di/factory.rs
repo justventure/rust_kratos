@@ -1,22 +1,22 @@
-use crate::domain::ports::{
-    inbound::{
-        login::AuthenticationPort, recovery::RecoveryPort, registration::RegistrationPort,
-        settings::SettingsPort, verification::VerificationPort,
-    },
-    outbound::{identity::IdentityPort, session::SessionPort},
-};
-use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
-use crate::infrastructure::adapters::kratos::{
-    client::KratosClient,
-    http::{
-        identity::KratosIdentityAdapter, login::KratosAuthenticationAdapter,
-        logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
-        register::KratosRegistrationAdapter, settings::KratosSettingsAdapter,
-        verification::KratosVerificationAdapter,
-    },
-};
-use crate::infrastructure::di::adapter_factory::AdapterFactory;
 use std::sync::Arc;
+
+use crate::domain::ports::inbound::login::AuthenticationPort;
+use crate::domain::ports::inbound::recovery::RecoveryPort;
+use crate::domain::ports::inbound::registration::RegistrationPort;
+use crate::domain::ports::inbound::settings::SettingsPort;
+use crate::domain::ports::inbound::verification::VerificationPort;
+use crate::domain::ports::outbound::identity::IdentityPort;
+use crate::domain::ports::outbound::session::SessionPort;
+use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
+use crate::infrastructure::adapters::kratos::client::KratosClient;
+use crate::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
+use crate::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
+use crate::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
+use crate::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
+use crate::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
+use crate::infrastructure::adapters::kratos::http::settings::KratosSettingsAdapter;
+use crate::infrastructure::adapters::kratos::http::verification::KratosVerificationAdapter;
+use crate::infrastructure::di::adapter_factory::AdapterFactory;
 
 pub struct KratosAdapterFactory {
     client: Arc<KratosClient>,
@@ -50,10 +50,7 @@ impl AdapterFactory for KratosAdapterFactory {
     }
 
     fn create_session_adapter(&self) -> Arc<dyn SessionPort> {
-        Arc::new(KratosSessionAdapter::new(
-            self.client.clone(),
-            Some(self.cache.clone()),
-        ))
+        Arc::new(KratosSessionAdapter::new(self.client.clone(), Some(self.cache.clone())))
     }
 
     fn create_recovery_adapter(&self) -> Arc<dyn RecoveryPort> {

@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use reqwest::Client;
 use rust_kratos::infrastructure::adapters::kratos::client::KratosClient;
 use serde::Deserialize;
-use std::sync::Arc;
-use std::time::Duration;
 
 pub struct TestContext {
     pub client: Arc<KratosClient>,
@@ -12,10 +13,8 @@ pub struct TestContext {
 
 impl TestContext {
     pub fn new() -> Self {
-        let public_url = std::env::var("KRATOS_PUBLIC_URL")
-            .unwrap_or_else(|_| "http://127.0.0.1:4433".to_string());
-        let admin_url = std::env::var("KRATOS_ADMIN_URL")
-            .unwrap_or_else(|_| "http://127.0.0.1:4434".to_string());
+        let public_url = std::env::var("KRATOS_PUBLIC_URL").unwrap_or_else(|_| "http://127.0.0.1:4433".to_string());
+        let admin_url = std::env::var("KRATOS_ADMIN_URL").unwrap_or_else(|_| "http://127.0.0.1:4434".to_string());
         Self {
             client: Arc::new(KratosClient {
                 client: Client::builder()
@@ -61,8 +60,7 @@ pub struct MailhogContent {
 
 impl MailhogClient {
     pub fn new() -> Self {
-        let base_url = std::env::var("MAILHOG_API_URL")
-            .unwrap_or_else(|_| "http://127.0.0.1:8025/api/v2".to_string());
+        let base_url = std::env::var("MAILHOG_API_URL").unwrap_or_else(|_| "http://127.0.0.1:8025/api/v2".to_string());
         Self {
             client: Client::new(),
             base_url,
@@ -70,11 +68,7 @@ impl MailhogClient {
     }
 
     pub async fn delete_all(&self) {
-        let _ = self
-            .client
-            .delete(format!("{}/messages", self.base_url))
-            .send()
-            .await;
+        let _ = self.client.delete(format!("{}/messages", self.base_url)).send().await;
     }
 
     pub async fn fetch_recovery_link(&self, email: &str) -> Option<String> {
@@ -102,10 +96,6 @@ impl MailhogClient {
             .chars()
             .take_while(|c| !c.is_whitespace() && *c != '"' && *c != '<')
             .collect();
-        if link.contains(contains) {
-            Some(link)
-        } else {
-            None
-        }
+        if link.contains(contains) { Some(link) } else { None }
     }
 }

@@ -1,12 +1,13 @@
-use crate::infrastructure::adapters::http::cookies::RequestResponseCookies;
-use actix_web::Error;
-use actix_web::HttpMessage;
-use actix_web::body::MessageBody;
-use actix_web::cookie::Cookie;
-use actix_web::dev::{ServiceRequest, ServiceResponse, Transform, forward_ready};
 use std::future::{Future, Ready, ready};
 use std::pin::Pin;
 use std::rc::Rc;
+
+use actix_web::body::MessageBody;
+use actix_web::cookie::Cookie;
+use actix_web::dev::{ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::{Error, HttpMessage};
+
+use crate::infrastructure::adapters::http::cookies::RequestResponseCookies;
 
 type LocalBoxFuture<T> = Pin<Box<dyn Future<Output = T> + 'static>>;
 
@@ -14,8 +15,7 @@ pub struct CookieMiddleware;
 
 impl<S, B> Transform<S, ServiceRequest> for CookieMiddleware
 where
-    S: actix_web::dev::Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>
-        + 'static,
+    S: actix_web::dev::Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
@@ -37,8 +37,7 @@ pub struct CookieMiddlewareService<S> {
 
 impl<S, B> actix_web::dev::Service<ServiceRequest> for CookieMiddlewareService<S>
 where
-    S: actix_web::dev::Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>
-        + 'static,
+    S: actix_web::dev::Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
@@ -48,8 +47,7 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        req.extensions_mut()
-            .insert(RequestResponseCookies::default());
+        req.extensions_mut().insert(RequestResponseCookies::default());
 
         let svc = self.service.clone();
 

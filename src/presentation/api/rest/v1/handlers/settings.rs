@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+
 use crate::application::commands::CommandHandler;
-use crate::application::commands::account::settings::{
-    UpdateSettingsCommand, UpdateSettingsResult,
-};
+use crate::application::commands::account::settings::{UpdateSettingsCommand, UpdateSettingsResult};
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::settings::SettingsData;
 use crate::infrastructure::adapters::http::cookies::RequestResponseCookies;
@@ -9,8 +11,6 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::rest::v1::dto::auth::UpdateSettingsDto;
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
 use crate::presentation::api::rest::v1::schema::auth::UpdateSettingsSchema;
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
-use std::sync::Arc;
 
 #[utoipa::path(
     put,
@@ -46,9 +46,7 @@ pub async fn update_settings(
             }
             HttpResponse::Ok().json(serde_json::json!({ "flow_id": flow_id }))
         }
-        Err(DomainError::Auth(AuthError::NotAuthenticated)) => {
-            HttpResponse::Unauthorized().body("Not authenticated")
-        }
+        Err(DomainError::Auth(AuthError::NotAuthenticated)) => HttpResponse::Unauthorized().body("Not authenticated"),
         Err(DomainError::Auth(AuthError::PrivilegedSessionRequired)) => {
             HttpResponse::Forbidden().body("Privileged session required")
         }

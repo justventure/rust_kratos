@@ -1,13 +1,15 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use reqwest::StatusCode;
+use tracing::debug;
+
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::settings::{SettingsData, SettingsPort};
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::settings::SettingsPayload;
-use async_trait::async_trait;
-use reqwest::StatusCode;
-use std::sync::Arc;
-use tracing::debug;
 
 pub struct KratosSettingsAdapter {
     client: Arc<KratosClient>,
@@ -24,9 +26,7 @@ fn map_settings_error(e: KratosFlowError) -> DomainError {
         (StatusCode::FORBIDDEN, _) => AuthError::PrivilegedSessionRequired.into(),
         (StatusCode::UNAUTHORIZED, _) => AuthError::NotAuthenticated.into(),
         (StatusCode::GONE, _) => DomainError::NotFound("settings flow".into()),
-        (StatusCode::BAD_REQUEST, 4000010) => {
-            DomainError::InvalidData("Password is too weak".into())
-        }
+        (StatusCode::BAD_REQUEST, 4000010) => DomainError::InvalidData("Password is too weak".into()),
         (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
         _ => DomainError::ServiceUnavailable(e.to_string()),
     }
@@ -35,14 +35,9 @@ fn map_settings_error(e: KratosFlowError) -> DomainError {
 #[async_trait]
 impl SettingsPort for KratosSettingsAdapter {
     async fn initiate_settings(&self, cookie: &str) -> Result<String, DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "settings",
-            Some(cookie),
-        )
-        .await
-        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+        let flow = fetch_flow(&self.client.client, &self.client.public_url, "settings", Some(cookie))
+            .await
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         Ok(flow.flow_id.as_str().to_string())
     }
@@ -53,14 +48,9 @@ impl SettingsPort for KratosSettingsAdapter {
         data: SettingsData,
         cookie: &str,
     ) -> Result<(String, Vec<String>), DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "settings",
-            Some(cookie),
-        )
-        .await
-        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+        let flow = fetch_flow(&self.client.client, &self.client.public_url, "settings", Some(cookie))
+            .await
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         let payload = SettingsPayload::from_data(data, flow.csrf_token.clone());
 
