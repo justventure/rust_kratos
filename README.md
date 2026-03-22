@@ -1,5 +1,4 @@
 # Kratos rust example service
-
 <div align="left">
   <!-- Dependencies & security -->
   <a href="https://deps.rs/repo/github/vwency/rust_kratos"><img src="https://deps.rs/repo/github/vwency/rust_kratos/status.svg"/></a>
@@ -18,9 +17,12 @@ make run
 ```
 
 ### Available APP_ENV values
-| APP_ENV value    | Используемый конфиг       |
-|------------------|---------------------------|
-| development      | development.toml          |
-| production       | production.toml           |
-| docker_local     | docker_local.toml         |
-| -                | development.toml          |
+| APP_ENV value | Используемый конфиг |
+|---------------|---------------------|
+| development   | development.toml    |
+| production    | production.toml     |
+| docker_local  | docker_local.toml   |
+| -             | development.toml    |
+
+### Benchmark
+![Benchmark](benchmark/Screenshot%20From%202026-03-23%2002-22-38.png)
