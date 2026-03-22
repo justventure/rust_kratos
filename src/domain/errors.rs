@@ -10,6 +10,12 @@ pub enum AuthError {
     InvalidCredentials,
     #[error("Privileged session required")]
     PrivilegedSessionRequired,
+    #[error("Forbidden")]
+    Forbidden,
+    #[error("Account disabled")]
+    AccountDisabled,
+    #[error("Too many attempts")]
+    TooManyAttempts,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -24,4 +30,6 @@ pub enum DomainError {
     InvalidData(String),
     #[error("Service unavailable: {0}")]
     ServiceUnavailable(String),
+    #[error("Internal error: {0}")]
+    Internal(String),
 }
