@@ -6,8 +6,8 @@ use actix_web::{HttpResponse, Responder, get, web};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-const OPENAPI_JSON_PATH: &str = "/api-docs/openapi.json";
-const SWAGGER_UI_PATH: &str = "/swagger-ui/{_:.*}";
+const OPENAPI_JSON_PATH: &str = "/api-docs/v1/openapi.json";
+const SWAGGER_UI_PATH: &str = "/v1/swagger-ui/{_:.*}";
 
 #[derive(OpenApi)]
 #[openapi(
@@ -45,7 +45,7 @@ async fn openapi_json() -> impl Responder {
         .body(ApiDoc::openapi().to_json().unwrap())
 }
 
-#[get("/docs")]
+#[get("/v1/docs")]
 async fn swagger_ui_html() -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
