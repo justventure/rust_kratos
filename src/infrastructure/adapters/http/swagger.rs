@@ -6,6 +6,9 @@ use actix_web::{HttpResponse, Responder, get, web};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+const OPENAPI_JSON_PATH: &str = "/api-docs/v1/openapi.json";
+const SWAGGER_UI_PATH: &str = "/swagger-ui/v1/{_:.*}";
+
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -35,14 +38,14 @@ use utoipa_swagger_ui::SwaggerUi;
 )]
 pub struct ApiDoc;
 
-#[get("/api-docs/openapi.json")]
+#[get("/api-docs/v1/openapi.json")]
 async fn openapi_json() -> impl Responder {
     HttpResponse::Ok()
         .content_type("application/json")
         .body(ApiDoc::openapi().to_json().unwrap())
 }
 
-#[get("/docs")]
+#[get("/docs/v1")]
 async fn swagger_ui_html() -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
@@ -50,9 +53,7 @@ async fn swagger_ui_html() -> impl Responder {
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
-    );
+    cfg.service(SwaggerUi::new(SWAGGER_UI_PATH).url(OPENAPI_JSON_PATH, ApiDoc::openapi()));
     cfg.service(openapi_json);
     cfg.service(swagger_ui_html);
 }
