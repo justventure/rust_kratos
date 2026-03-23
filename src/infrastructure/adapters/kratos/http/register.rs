@@ -9,7 +9,7 @@ use crate::domain::ports::inbound::registration::{RegistrationData, Registration
 use crate::domain::ports::outbound::session::SessionPort;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
-use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
+use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, fetch_flow_by_id, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::registration::RegistrationPayload;
 
@@ -53,10 +53,16 @@ impl RegistrationPort for KratosRegistrationAdapter {
         Ok(flow.flow_id.as_str().to_string())
     }
 
-    async fn complete_registration(&self, _flow_id: &str, data: RegistrationData) -> Result<String, DomainError> {
-        let flow = fetch_flow(&self.client.client, &self.client.public_url, "registration", None)
-            .await
-            .map_err(map_registration_error)?;
+    async fn complete_registration(&self, flow_id: &str, data: RegistrationData) -> Result<String, DomainError> {
+        let flow = fetch_flow_by_id(
+            &self.client.client,
+            &self.client.public_url,
+            "registration",
+            flow_id,
+            None,
+        )
+        .await
+        .map_err(map_registration_error)?;
         let payload = RegistrationPayload::from_data(data, flow.csrf_token.clone());
         let result = post_flow(
             &self.client.client,
