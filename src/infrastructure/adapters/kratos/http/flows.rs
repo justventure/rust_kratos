@@ -18,6 +18,7 @@ pub async fn fetch_flow(
     }
 
     let response = request.send().await.map_err(KratosFlowError::network)?;
+
     let status = response.status();
     let flow_cookies = extract_cookies(&response);
 
@@ -34,52 +35,9 @@ pub async fn fetch_flow(
     }
 
     let flow: serde_json::Value = response.json().await.map_err(KratosFlowError::network)?;
-    let csrf_token = extract_csrf_token(&flow).map_err(KratosFlowError::network)?;
-    let flow_id = extract_flow_id(&flow).map_err(KratosFlowError::network)?;
-    let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
-    all_cookies.extend(flow_cookies);
 
-    Ok(FlowResult {
-        flow_id,
-        csrf_token,
-        cookies: all_cookies,
-    })
-}
-
-pub async fn fetch_flow_by_id(
-    client: &Client,
-    public_url: &str,
-    endpoint: &str,
-    flow_id: &str,
-    cookie: Option<&str>,
-) -> Result<FlowResult, KratosFlowError> {
-    let url = format!(
-        "{}/self-service/{}/flows?id={}",
-        public_url.replace("localhost", "127.0.0.1"),
-        endpoint,
-        flow_id
-    );
-
-    let mut request = client.get(&url);
-    if let Some(cookie_value) = cookie {
-        request = request.header(header::COOKIE, cookie_value);
-    }
-
-    let response = request.send().await.map_err(KratosFlowError::network)?;
-    let status = response.status();
-    let flow_cookies = extract_cookies(&response);
-
-    if !status.is_success() {
-        let body = response
-            .json::<serde_json::Value>()
-            .await
-            .unwrap_or_else(|_| serde_json::json!({}));
-        return Err(KratosFlowError { status, body });
-    }
-
-    let flow: serde_json::Value = response.json().await.map_err(KratosFlowError::network)?;
-    let csrf_token = extract_csrf_token(&flow).map_err(KratosFlowError::network)?;
-    let flow_id = extract_flow_id(&flow).map_err(KratosFlowError::network)?;
+    let csrf_token = extract_csrf_token(&flow).map_err(|e| KratosFlowError::network(e))?;
+    let flow_id = extract_flow_id(&flow).map_err(|e| KratosFlowError::network(e))?;
     let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
     all_cookies.extend(flow_cookies);
 
@@ -208,8 +166,9 @@ async fn handle_redirect(
     }
 
     let flow: serde_json::Value = flow_response.json().await.map_err(KratosFlowError::network)?;
-    let csrf_token = extract_csrf_token(&flow).map_err(KratosFlowError::network)?;
-    let flow_id = extract_flow_id(&flow).map_err(KratosFlowError::network)?;
+
+    let csrf_token = extract_csrf_token(&flow).map_err(|e| KratosFlowError::network(e))?;
+    let flow_id = extract_flow_id(&flow).map_err(|e| KratosFlowError::network(e))?;
     let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
     all_cookies.extend(flow_cookies);
 
