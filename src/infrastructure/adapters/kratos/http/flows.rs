@@ -9,7 +9,7 @@ pub async fn fetch_flow(
     public_url: &str,
     endpoint: &str,
     cookie: Option<&str>,
-) -> Result<FlowResult, Box<dyn std::error::Error>> {
+) -> Result<FlowResult, KratosFlowError> {
     let url = format!("{}/self-service/{}/browser", public_url, endpoint).replace("localhost", "127.0.0.1");
 
     let mut request = client.get(&url);
@@ -17,12 +17,7 @@ pub async fn fetch_flow(
         request = request.header(header::COOKIE, cookie_value);
     }
 
-    let response = request.send().await.map_err(|e| {
-        format!(
-            "Failed to connect to Kratos at {}: {}. Make sure Kratos is running.",
-            url, e
-        )
-    })?;
+    let response = request.send().await.map_err(KratosFlowError::network)?;
 
     let status = response.status();
     let flow_cookies = extract_cookies(&response);
@@ -32,17 +27,17 @@ pub async fn fetch_flow(
     }
 
     if !status.is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Failed to fetch {} flow (status {}): {}", endpoint, status, error_text).into());
+        let body = response
+            .json::<serde_json::Value>()
+            .await
+            .unwrap_or_else(|_| serde_json::json!({}));
+        return Err(KratosFlowError { status, body });
     }
 
-    let flow: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse {} flow response: {}", endpoint, e))?;
+    let flow: serde_json::Value = response.json().await.map_err(KratosFlowError::network)?;
 
-    let csrf_token = extract_csrf_token(&flow)?;
-    let flow_id = extract_flow_id(&flow)?;
+    let csrf_token = extract_csrf_token(&flow).map_err(|e| KratosFlowError::network(e))?;
+    let flow_id = extract_flow_id(&flow).map_err(|e| KratosFlowError::network(e))?;
     let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
     all_cookies.extend(flow_cookies);
 
@@ -105,7 +100,7 @@ fn extract_cookies(response: &reqwest::Response) -> Vec<String> {
         .collect()
 }
 
-fn extract_csrf_token(flow: &serde_json::Value) -> Result<String, Box<dyn std::error::Error>> {
+fn extract_csrf_token(flow: &serde_json::Value) -> Result<String, String> {
     flow["ui"]["nodes"]
         .as_array()
         .and_then(|nodes| {
@@ -115,14 +110,14 @@ fn extract_csrf_token(flow: &serde_json::Value) -> Result<String, Box<dyn std::e
         })
         .and_then(|node| node["attributes"]["value"].as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| "CSRF token not found in flow response".into())
+        .ok_or_else(|| "CSRF token not found in flow response".to_string())
 }
 
-fn extract_flow_id(flow: &serde_json::Value) -> Result<FlowId, Box<dyn std::error::Error>> {
+fn extract_flow_id(flow: &serde_json::Value) -> Result<FlowId, String> {
     flow["id"]
         .as_str()
         .map(FlowId::new)
-        .ok_or_else(|| "Flow ID not found in response".into())
+        .ok_or_else(|| "Flow ID not found in response".to_string())
 }
 
 async fn handle_redirect(
@@ -132,20 +127,18 @@ async fn handle_redirect(
     response: reqwest::Response,
     flow_cookies: Vec<String>,
     cookie: Option<&str>,
-) -> Result<FlowResult, Box<dyn std::error::Error>> {
+) -> Result<FlowResult, KratosFlowError> {
     let location = response
         .headers()
         .get(header::LOCATION)
         .and_then(|h| h.to_str().ok())
-        .ok_or("No redirect location found")?;
+        .ok_or_else(|| KratosFlowError::network("No redirect location found"))?;
 
     let flow_id_str = location
         .split("flow=")
         .nth(1)
-        .ok_or(format!("Flow ID not found in redirect URL: {}", location))?
-        .split('&')
-        .next()
-        .ok_or(format!("Flow ID not found in redirect URL: {}", location))?;
+        .and_then(|s| s.split('&').next())
+        .ok_or_else(|| KratosFlowError::network(format!("Flow ID not found in redirect URL: {}", location)))?;
 
     let flow_url = format!(
         "{}/self-service/{}/flows?id={}",
@@ -161,20 +154,21 @@ async fn handle_redirect(
         flow_request = flow_request.header(header::COOKIE, cookie_value);
     }
 
-    let flow_response = flow_request.send().await?;
-    if !flow_response.status().is_success() {
-        let status = flow_response.status();
-        let error_text = flow_response.text().await.unwrap_or_default();
-        return Err(format!("Failed to fetch {} flow (status {}): {}", endpoint, status, error_text).into());
+    let flow_response = flow_request.send().await.map_err(KratosFlowError::network)?;
+    let status = flow_response.status();
+
+    if !status.is_success() {
+        let body = flow_response
+            .json::<serde_json::Value>()
+            .await
+            .unwrap_or_else(|_| serde_json::json!({}));
+        return Err(KratosFlowError { status, body });
     }
 
-    let flow: serde_json::Value = flow_response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse {} flow response: {}", endpoint, e))?;
+    let flow: serde_json::Value = flow_response.json().await.map_err(KratosFlowError::network)?;
 
-    let csrf_token = extract_csrf_token(&flow)?;
-    let flow_id = extract_flow_id(&flow)?;
+    let csrf_token = extract_csrf_token(&flow).map_err(|e| KratosFlowError::network(e))?;
+    let flow_id = extract_flow_id(&flow).map_err(|e| KratosFlowError::network(e))?;
     let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
     all_cookies.extend(flow_cookies);
 

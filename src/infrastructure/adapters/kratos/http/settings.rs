@@ -22,12 +22,17 @@ impl KratosSettingsAdapter {
 }
 
 fn map_settings_error(e: KratosFlowError) -> DomainError {
+    if e.is_browser_location_change_required() {
+        return DomainError::ServiceUnavailable("Browser location change required".into());
+    }
     match (e.status, e.message_id()) {
         (StatusCode::FORBIDDEN, _) => AuthError::PrivilegedSessionRequired.into(),
         (StatusCode::UNAUTHORIZED, _) => AuthError::NotAuthenticated.into(),
         (StatusCode::GONE, _) => DomainError::NotFound("settings flow".into()),
         (StatusCode::BAD_REQUEST, 4000010) => DomainError::InvalidData("Password is too weak".into()),
         (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
+        (StatusCode::TOO_MANY_REQUESTS, _) => AuthError::TooManyAttempts.into(),
+        (StatusCode::UNPROCESSABLE_ENTITY, _) => DomainError::InvalidData(e.message_text().into()),
         _ => DomainError::ServiceUnavailable(e.to_string()),
     }
 }
@@ -37,8 +42,7 @@ impl SettingsPort for KratosSettingsAdapter {
     async fn initiate_settings(&self, cookie: &str) -> Result<String, DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "settings", Some(cookie))
             .await
-            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
-
+            .map_err(map_settings_error)?;
         Ok(flow.flow_id.as_str().to_string())
     }
 
@@ -50,15 +54,12 @@ impl SettingsPort for KratosSettingsAdapter {
     ) -> Result<(String, Vec<String>), DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "settings", Some(cookie))
             .await
-            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
-
+            .map_err(map_settings_error)?;
         let payload = SettingsPayload::from_data(data, flow.csrf_token.clone());
-
         debug!(
             "Settings payload: {}",
             serde_json::to_string_pretty(&payload).unwrap_or_default()
         );
-
         let result = post_flow(
             &self.client.client,
             &self.client.public_url,
@@ -69,17 +70,14 @@ impl SettingsPort for KratosSettingsAdapter {
         )
         .await
         .map_err(map_settings_error)?;
-
         debug!("Settings response: {:?}", result.data);
         debug!("Settings response cookies: {:?}", result.cookies);
-
         let state = result
             .data
             .get("state")
             .and_then(|s| s.as_str())
             .map(|s| s.to_string())
-            .ok_or_else(|| DomainError::ServiceUnavailable("No state in response".into()))?;
-
+            .ok_or_else(|| DomainError::Internal("No state in response".into()))?;
         Ok((state, result.cookies))
     }
 }

@@ -24,12 +24,17 @@ impl KratosVerificationAdapter {
 }
 
 fn map_verification_error(e: KratosFlowError) -> DomainError {
+    if e.is_browser_location_change_required() {
+        return DomainError::ServiceUnavailable("Browser location change required".into());
+    }
     match (e.status, e.message_id()) {
         (StatusCode::BAD_REQUEST, 4070006) => DomainError::InvalidData("Invalid verification code".into()),
         (StatusCode::BAD_REQUEST, 4070001) => DomainError::InvalidData("Invalid email address".into()),
         (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
         (StatusCode::GONE, _) => DomainError::NotFound("verification flow".into()),
         (StatusCode::UNAUTHORIZED, _) => AuthError::NotAuthenticated.into(),
+        (StatusCode::TOO_MANY_REQUESTS, _) => AuthError::TooManyAttempts.into(),
+        (StatusCode::UNPROCESSABLE_ENTITY, _) => DomainError::InvalidData(e.message_text().into()),
         _ => DomainError::ServiceUnavailable(e.to_string()),
     }
 }
@@ -44,10 +49,8 @@ async fn execute_verification_flow(
 ) -> Result<(), DomainError> {
     let flow = fetch_flow(&client.client, &client.public_url, "verification", cookie)
         .await
-        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
-
+        .map_err(map_verification_error)?;
     let payload = VerificationPayload::new(method, email, code, flow.csrf_token.clone(), transient_payload);
-
     post_flow(
         &client.client,
         &client.public_url,
@@ -58,7 +61,6 @@ async fn execute_verification_flow(
     )
     .await
     .map_err(map_verification_error)?;
-
     Ok(())
 }
 

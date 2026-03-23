@@ -25,6 +25,7 @@ impl KratosSessionAdapter {
             cache,
         }
     }
+
     async fn get_logout_flow(&self, cookie: &str) -> Result<String, DomainError> {
         let url = format!("{}/self-service/logout/browser", self.client.public_url);
 
@@ -42,13 +43,10 @@ impl KratosSessionAdapter {
                 return Err(AuthError::NotAuthenticated.into());
             }
             StatusCode::TOO_MANY_REQUESTS => {
-                return Err(DomainError::ServiceUnavailable("Rate limit exceeded".into()));
+                return Err(AuthError::TooManyAttempts.into());
             }
             s if !s.is_success() => {
-                return Err(DomainError::ServiceUnavailable(format!(
-                    "Failed to get logout flow: {}",
-                    s
-                )));
+                return Err(DomainError::Internal(format!("Failed to get logout flow: {}", s)));
             }
             _ => {}
         }
@@ -60,7 +58,7 @@ impl KratosSessionAdapter {
 
         let logout_token = data["logout_token"]
             .as_str()
-            .ok_or_else(|| DomainError::InvalidData("Logout token not found".into()))?;
+            .ok_or_else(|| DomainError::Internal("Logout token not found".into()))?;
 
         Ok(format!(
             "{}/self-service/logout?token={}",
@@ -94,12 +92,10 @@ impl SessionPort for KratosSessionAdapter {
         let result = match response.status() {
             s if s.is_success() || s == StatusCode::FOUND || s == StatusCode::SEE_OTHER => Ok(()),
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(AuthError::NotAuthenticated.into()),
+            StatusCode::TOO_MANY_REQUESTS => Err(AuthError::TooManyAttempts.into()),
             s => {
                 let error_text = response.text().await.unwrap_or_else(|_| s.to_string());
-                Err(DomainError::ServiceUnavailable(format!(
-                    "Logout failed: {}",
-                    error_text
-                )))
+                Err(DomainError::Internal(format!("Logout failed: {}", error_text)))
             }
         };
 
