@@ -37,6 +37,17 @@ pub struct Config {
     pub kratos: KratosConfig,
     pub server: ServerConfig,
     pub redis: RedisConfig,
+    pub telemetry: TelemetryConfig,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TelemetryConfig {
+    #[serde(default = "defaults::otlp_endpoint")]
+    pub otlp_endpoint: String,
+    #[serde(default = "defaults::service_name")]
+    pub service_name: String,
+    #[serde(default)]
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -128,4 +139,7 @@ mod defaults {
     pub fn log_level() -> String { "info".to_string() }
     pub fn cors_max_age() -> usize { 3600 }
     pub fn cors_allowed_origins() -> Vec<String> { vec!["http://localhost:3000".to_string()] }
+    // Telemetry
+    pub fn otlp_endpoint() -> String { "http://localhost:4317".to_string() }
+    pub fn service_name() -> String { "auth-service".to_string() }
 }

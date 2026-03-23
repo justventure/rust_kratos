@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4.44", features = ["serde"] }
-actix-web = "4"
+actix-web = "4.13.0"
 tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
 tracing = { version = "0.1.44" }
 tracing-actix-web = "0.7.21"
@@ -13,16 +13,24 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 actix-cors = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0.18"
-anyhow = "1.0"
+anyhow = "1.0.102"
 serde_json = { version = "1.0.149" }
 async-trait = { version = "0.1.89" }
 reqwest = { version = "0.13.2", features = ["json", "cookies"] }
 config = "0.15.22"
 actix-web-prometheus = "0.1.2"
-dotenvy = "0.15"
+dotenvy = "0.15.7"
 redis = { version = "1.1.0", features = ["tokio-comp", "connection-manager"] }
 utoipa = { version = "5.4.0", features = ["actix_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
+
+# Telemetry
+console-subscriber = "0.5"
+opentelemetry = { version = "0.31" }
+opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.31", features = ["tonic", "grpc-tonic"] }
+tracing-opentelemetry = "0.32.1"
+tonic = { version = "0.14.5", features = ["transport"] }
 
 [[test]]
 name = "integration"
@@ -34,3 +42,7 @@ uuid = { version = "1.22.0", features = ["v4"] }
 
 [features]
 default = []
+
+[profile.profiling]
+inherits = "release"
+debug = true
