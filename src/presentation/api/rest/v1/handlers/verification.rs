@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{HttpRequest, HttpResponse, web};
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::verification::{
@@ -28,6 +29,7 @@ use crate::presentation::api::rest::v1::schema::auth::{
         (status = 401, description = "Not authenticated"),
     )
 )]
+#[instrument(skip_all, name = "http.verify_by_link")]
 pub async fn verify_by_link(
     req: HttpRequest,
     use_cases: web::Data<Arc<UseCases>>,
@@ -60,6 +62,7 @@ pub async fn verify_by_link(
         (status = 401, description = "Not authenticated"),
     )
 )]
+#[instrument(skip_all, name = "http.send_verification_code")]
 pub async fn send_verification_code(
     req: HttpRequest,
     use_cases: web::Data<Arc<UseCases>>,
@@ -93,6 +96,7 @@ pub async fn send_verification_code(
         (status = 404, description = "Not found"),
     )
 )]
+#[instrument(skip_all, name = "http.submit_verification_code")]
 pub async fn submit_verification_code(
     req: HttpRequest,
     use_cases: web::Data<Arc<UseCases>>,

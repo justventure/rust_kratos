@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
@@ -35,6 +36,7 @@ impl VerificationCommandHandler {
 
 #[async_trait]
 impl CommandHandler<VerifyByLinkCommand> for VerificationCommandHandler {
+    #[instrument(skip_all, name = "command.verify_by_link")]
     async fn handle(&self, command: VerifyByLinkCommand) -> Result<(), DomainError> {
         self.verification_port
             .verify_by_link(command.request, command.cookie.as_deref())
@@ -44,6 +46,7 @@ impl CommandHandler<VerifyByLinkCommand> for VerificationCommandHandler {
 
 #[async_trait]
 impl CommandHandler<SendVerificationCodeCommand> for VerificationCommandHandler {
+    #[instrument(skip_all, name = "command.send_verification_code")]
     async fn handle(&self, command: SendVerificationCodeCommand) -> Result<(), DomainError> {
         self.verification_port
             .send_verification_code(command.request, command.cookie.as_deref())
@@ -53,6 +56,7 @@ impl CommandHandler<SendVerificationCodeCommand> for VerificationCommandHandler 
 
 #[async_trait]
 impl CommandHandler<SubmitVerificationCodeCommand> for VerificationCommandHandler {
+    #[instrument(skip_all, name = "command.submit_verification_code")]
     async fn handle(&self, command: SubmitVerificationCodeCommand) -> Result<(), DomainError> {
         self.verification_port
             .submit_verification_code(command.request, &command.cookie)

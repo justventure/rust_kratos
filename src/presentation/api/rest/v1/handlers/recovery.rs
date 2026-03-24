@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{HttpRequest, HttpResponse, web};
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::recovery::RecoveryCommand;
@@ -23,6 +24,7 @@ use crate::presentation::api::rest::v1::schema::auth::RecoverySchema;
         (status = 409, description = "Already logged in"),
     )
 )]
+#[instrument(skip_all, name = "http.recovery")]
 pub async fn recovery(
     req: HttpRequest,
     use_cases: web::Data<Arc<UseCases>>,

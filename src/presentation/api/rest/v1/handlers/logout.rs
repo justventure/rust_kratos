@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{HttpRequest, HttpResponse, web};
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::logout::LogoutCommand;
@@ -17,6 +18,7 @@ use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
         (status = 401, description = "Not authenticated"),
     )
 )]
+#[instrument(skip_all, name = "http.logout")]
 pub async fn logout(req: HttpRequest, use_cases: web::Data<Arc<UseCases>>) -> HttpResponse {
     let command = LogoutCommand {
         cookie: extract_cookie(&req),

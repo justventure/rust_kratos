@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::StatusCode;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::recovery::{RecoveryPort, RecoveryRequest};
@@ -38,6 +38,7 @@ fn map_recovery_error(e: KratosFlowError) -> DomainError {
 
 #[async_trait]
 impl RecoveryPort for KratosRecoveryAdapter {
+    #[instrument(skip_all, name = "kratos.recovery")]
     async fn initiate_recovery(&self, request: RecoveryRequest, cookie: Option<&str>) -> Result<(), DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "recovery", cookie)
             .await

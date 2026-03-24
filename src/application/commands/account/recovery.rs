@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
@@ -24,6 +24,7 @@ impl RecoveryCommandHandler {
 
 #[async_trait]
 impl CommandHandler<RecoveryCommand> for RecoveryCommandHandler {
+    #[instrument(skip_all, name = "command.recovery")]
     async fn handle(&self, command: RecoveryCommand) -> Result<(), DomainError> {
         info!(
             email = command.request.email.as_str(),

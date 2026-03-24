@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::settings::{UpdateSettingsCommand, UpdateSettingsResult};
@@ -24,6 +25,7 @@ use crate::presentation::api::rest::v1::schema::auth::UpdateSettingsSchema;
         (status = 403, description = "Privileged session required"),
     )
 )]
+#[instrument(skip_all, name = "http.update_settings")]
 pub async fn update_settings(
     req: HttpRequest,
     use_cases: web::Data<Arc<UseCases>>,

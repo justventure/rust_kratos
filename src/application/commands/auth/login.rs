@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
@@ -23,8 +24,9 @@ impl LoginCommandHandler {
 
 #[async_trait]
 impl CommandHandler<LoginCommand, String> for LoginCommandHandler {
+    #[instrument(skip_all, name = "command.login")]
     async fn handle(&self, command: LoginCommand) -> Result<String, DomainError> {
-        let flow_id = self.auth_port.initiate_login(command.cookie.as_deref()).await?;
-        self.auth_port.complete_login(&flow_id, command.credentials).await
+        let flow = self.auth_port.initiate_login(command.cookie.as_deref()).await?;
+        self.auth_port.complete_login(flow, command.credentials).await
     }
 }

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::StatusCode;
+use tracing::instrument;
 
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::verification::{
@@ -39,6 +40,7 @@ fn map_verification_error(e: KratosFlowError) -> DomainError {
     }
 }
 
+#[instrument(skip_all, name = "kratos.execute_verification_flow")]
 async fn execute_verification_flow(
     client: &KratosClient,
     method: AuthMethod,
@@ -66,6 +68,7 @@ async fn execute_verification_flow(
 
 #[async_trait]
 impl VerificationPort for KratosVerificationAdapter {
+    #[instrument(skip_all, name = "kratos.verify_by_link")]
     async fn verify_by_link(&self, request: VerifyByLinkRequest, cookie: Option<&str>) -> Result<(), DomainError> {
         execute_verification_flow(
             &self.client,
@@ -78,6 +81,7 @@ impl VerificationPort for KratosVerificationAdapter {
         .await
     }
 
+    #[instrument(skip_all, name = "kratos.send_verification_code")]
     async fn send_verification_code(&self, request: SendCodeRequest, cookie: Option<&str>) -> Result<(), DomainError> {
         execute_verification_flow(
             &self.client,
@@ -90,6 +94,7 @@ impl VerificationPort for KratosVerificationAdapter {
         .await
     }
 
+    #[instrument(skip_all, name = "kratos.submit_verification_code")]
     async fn submit_verification_code(&self, request: SubmitCodeRequest, cookie: &str) -> Result<(), DomainError> {
         execute_verification_flow(
             &self.client,

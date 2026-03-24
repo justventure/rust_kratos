@@ -5,8 +5,9 @@ use reqwest::StatusCode;
 use tracing::{error, instrument};
 
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
+use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationFlowData, RegistrationPort};
 use crate::domain::ports::outbound::session::SessionPort;
+use crate::domain::value_objects::flow_id::FlowId;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
@@ -43,21 +44,32 @@ fn map_registration_error(e: KratosFlowError) -> DomainError {
 #[async_trait]
 impl RegistrationPort for KratosRegistrationAdapter {
     #[instrument(skip(self, cookie), name = "kratos.initiate_registration")]
-    async fn initiate_registration(&self, cookie: Option<&str>) -> Result<String, DomainError> {
-        let is_active = self.check_session(cookie).await;
-        if is_active {
+    async fn initiate_registration(&self, cookie: Option<&str>) -> Result<RegistrationFlowData, DomainError> {
+        if self.check_session(cookie).await {
             error!("Registration attempt with an already active session");
             return Err(AuthError::AlreadyLoggedIn.into());
         }
         let flow = self.fetch_registration_flow(cookie).await?;
-        Ok(flow.flow_id.as_str().to_string())
+        Ok(RegistrationFlowData {
+            flow_id: flow.flow_id.as_str().to_string(),
+            csrf_token: flow.csrf_token,
+            cookies: flow.cookies,
+        })
     }
 
-    #[instrument(skip(self, data), name = "kratos.complete_registration")]
-    async fn complete_registration(&self, _flow_id: &str, data: RegistrationData) -> Result<String, DomainError> {
-        let flow = self.fetch_registration_flow(None).await?;
-        let payload = RegistrationPayload::from_data(data, flow.csrf_token.clone());
-        let result = self.post_registration_flow(&flow, payload).await?;
+    #[instrument(skip(self, flow, data), name = "kratos.complete_registration")]
+    async fn complete_registration(
+        &self,
+        flow: RegistrationFlowData,
+        data: RegistrationData,
+    ) -> Result<String, DomainError> {
+        let flow_result = FlowResult {
+            flow_id: FlowId::new(&flow.flow_id),
+            csrf_token: flow.csrf_token.clone(),
+            cookies: flow.cookies,
+        };
+        let payload = RegistrationPayload::from_data(data, flow.csrf_token);
+        let result = self.post_registration_flow(&flow_result, payload).await?;
         SessionCookie::find_in(result.cookies)
             .map(|c| c.as_str().to_string())
             .ok_or_else(|| {
