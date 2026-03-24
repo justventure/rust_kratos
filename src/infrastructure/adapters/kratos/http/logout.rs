@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::{StatusCode, header};
+use tracing::instrument;
 
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::outbound::identity::IdentityPort;
@@ -26,6 +27,7 @@ impl KratosSessionAdapter {
         }
     }
 
+    #[instrument(skip_all, name = "kratos.get_logout_flow")]
     async fn get_logout_flow(&self, cookie: &str) -> Result<String, DomainError> {
         let url = format!("{}/self-service/logout/browser", self.client.public_url);
 
@@ -77,6 +79,7 @@ impl KratosSessionAdapter {
 
 #[async_trait]
 impl SessionPort for KratosSessionAdapter {
+    #[instrument(skip_all, name = "kratos.logout")]
     async fn logout(&self, cookie: &str) -> Result<(), DomainError> {
         let logout_url = self.get_logout_flow(cookie).await?;
 
@@ -109,6 +112,7 @@ impl SessionPort for KratosSessionAdapter {
         result
     }
 
+    #[instrument(skip_all, name = "kratos.check_active_session")]
     async fn check_active_session(&self, cookie: Option<&str>) -> bool {
         let Some(cookie_value) = cookie else {
             return false;
@@ -116,6 +120,7 @@ impl SessionPort for KratosSessionAdapter {
         self.identity_adapter.get_current_user(cookie_value).await.is_ok()
     }
 
+    #[instrument(skip_all, name = "kratos.is_recovery_session")]
     async fn is_recovery_session(&self, cookie: Option<&str>) -> bool {
         let Some(cookie) = cookie else { return false };
 

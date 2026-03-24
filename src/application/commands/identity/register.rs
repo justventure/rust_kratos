@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
-use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
+use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationFlowData, RegistrationPort};
 
 pub struct RegisterCommand {
     pub data: RegistrationData,
@@ -28,18 +29,26 @@ impl RegisterCommandHandler {
 
 #[async_trait]
 impl CommandHandler<RegisterCommand, RegisterCommandResult> for RegisterCommandHandler {
+    #[instrument(skip(self, command), name = "command.register")]
     async fn handle(&self, command: RegisterCommand) -> Result<RegisterCommandResult, DomainError> {
-        let flow_id = self
-            .registration_port
-            .initiate_registration(command.cookie.as_deref())
-            .await?;
-        let session_cookie = self
-            .registration_port
-            .complete_registration(&flow_id, command.data)
-            .await?;
+        let flow = self.initiate(command.cookie.as_deref()).await?;
+        let flow_id = flow.flow_id.clone();
+        let session_cookie = self.complete(flow, command.data).await?;
         Ok(RegisterCommandResult {
             flow_id,
             session_cookie,
         })
+    }
+}
+
+impl RegisterCommandHandler {
+    #[instrument(skip(self), name = "registration.initiate")]
+    async fn initiate(&self, cookie: Option<&str>) -> Result<RegistrationFlowData, DomainError> {
+        self.registration_port.initiate_registration(cookie).await
+    }
+
+    #[instrument(skip(self, flow, data), name = "registration.complete")]
+    async fn complete(&self, flow: RegistrationFlowData, data: RegistrationData) -> Result<String, DomainError> {
+        self.registration_port.complete_registration(flow, data).await
     }
 }

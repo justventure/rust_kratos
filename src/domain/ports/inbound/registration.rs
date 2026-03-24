@@ -12,8 +12,19 @@ pub struct RegistrationData {
     pub geo_location: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct RegistrationFlowData {
+    pub flow_id: String,
+    pub csrf_token: String,
+    pub cookies: Vec<String>,
+}
+
 #[async_trait]
 pub trait RegistrationPort: Send + Sync {
-    async fn initiate_registration(&self, cookie: Option<&str>) -> Result<String, DomainError>;
-    async fn complete_registration(&self, flow_id: &str, data: RegistrationData) -> Result<String, DomainError>;
+    async fn initiate_registration(&self, cookie: Option<&str>) -> Result<RegistrationFlowData, DomainError>;
+    async fn complete_registration(
+        &self,
+        flow: RegistrationFlowData,
+        data: RegistrationData,
+    ) -> Result<String, DomainError>;
 }

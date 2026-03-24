@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::StatusCode;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::settings::{SettingsData, SettingsPort};
@@ -39,6 +39,7 @@ fn map_settings_error(e: KratosFlowError) -> DomainError {
 
 #[async_trait]
 impl SettingsPort for KratosSettingsAdapter {
+    #[instrument(skip_all, name = "kratos.initiate_settings")]
     async fn initiate_settings(&self, cookie: &str) -> Result<String, DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "settings", Some(cookie))
             .await
@@ -46,6 +47,7 @@ impl SettingsPort for KratosSettingsAdapter {
         Ok(flow.flow_id.as_str().to_string())
     }
 
+    #[instrument(skip_all, name = "kratos.update_settings")]
     async fn update_settings(
         &self,
         _flow_id: &str,

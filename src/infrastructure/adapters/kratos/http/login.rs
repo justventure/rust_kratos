@@ -2,11 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::StatusCode;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials, LoginFlowData};
 use crate::domain::ports::outbound::session::SessionPort;
+use crate::domain::value_objects::flow_id::FlowId;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
@@ -42,9 +43,12 @@ fn map_login_error(e: KratosFlowError) -> DomainError {
 
 #[async_trait]
 impl AuthenticationPort for KratosAuthenticationAdapter {
-    async fn initiate_login(&self, cookie: Option<&str>) -> Result<String, DomainError> {
-        let is_active = self.session.check_active_session(cookie).await;
-        let is_recovery = self.session.is_recovery_session(cookie).await;
+    #[instrument(skip_all, name = "kratos.initiate_login")]
+    async fn initiate_login(&self, cookie: Option<&str>) -> Result<LoginFlowData, DomainError> {
+        let (is_active, is_recovery) = tokio::join!(
+            self.session.check_active_session(cookie),
+            self.session.is_recovery_session(cookie),
+        );
         if is_active && !is_recovery {
             error!("Login attempt with an already active session");
             return Err(AuthError::AlreadyLoggedIn.into());
@@ -52,23 +56,26 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
             .await
             .map_err(map_login_error)?;
-        Ok(flow.flow_id.as_str().to_string())
+        Ok(LoginFlowData {
+            flow_id: flow.flow_id.as_str().to_string(),
+            csrf_token: flow.csrf_token,
+            cookies: flow.cookies,
+        })
     }
 
-    async fn complete_login(&self, _flow_id: &str, credentials: LoginCredentials) -> Result<String, DomainError> {
-        let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
-            .await
-            .map_err(map_login_error)?;
+    #[instrument(skip_all, name = "kratos.complete_login")]
+    async fn complete_login(&self, flow: LoginFlowData, credentials: LoginCredentials) -> Result<String, DomainError> {
         let payload = LoginPayload::from_credentials(credentials, flow.csrf_token.clone());
         debug!(
             "Login payload: {}",
             serde_json::to_string_pretty(&payload).unwrap_or_default()
         );
+        let flow_id = FlowId::new(&flow.flow_id);
         let result = post_flow(
             &self.client.client,
             &self.client.public_url,
             "login",
-            &flow.flow_id,
+            &flow_id,
             serde_json::to_value(payload).map_err(|e| DomainError::InvalidData(e.to_string()))?,
             &flow.cookies,
         )

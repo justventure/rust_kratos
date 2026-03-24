@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::{AuthError, DomainError};
@@ -22,6 +23,7 @@ impl LogoutCommandHandler {
 
 #[async_trait]
 impl CommandHandler<LogoutCommand> for LogoutCommandHandler {
+    #[instrument(skip_all, name = "command.logout")]
     async fn handle(&self, command: LogoutCommand) -> Result<(), DomainError> {
         let cookie = command.cookie.ok_or(AuthError::NotAuthenticated)?;
         self.session_port.logout(&cookie).await

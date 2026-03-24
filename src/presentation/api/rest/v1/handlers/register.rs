@@ -28,10 +28,14 @@ pub async fn register(
     use_cases: web::Data<Arc<UseCases>>,
     dto: web::Json<RegisterDto>,
 ) -> HttpResponse {
+    let span = tracing::info_span!("http.register");
+    let _enter = span.enter();
+
     let data: RegistrationData = match dto.into_inner().try_into() {
         Ok(d) => d,
         Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
     };
+
     match use_cases
         .commands
         .register

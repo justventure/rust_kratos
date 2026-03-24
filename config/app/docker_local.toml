@@ -22,3 +22,8 @@ cache_ttl_secs = 300
 max_retries = 5
 retry_delay_ms = 2000
 keep_alive_secs = 60
+
+[telemetry]
+enabled = true
+otlp_endpoint = "http://jaeger:4317"
+service_name = "rust_kratos"

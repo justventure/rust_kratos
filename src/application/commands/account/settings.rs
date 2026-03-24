@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
@@ -28,6 +29,7 @@ impl UpdateSettingsCommandHandler {
 
 #[async_trait]
 impl CommandHandler<UpdateSettingsCommand, UpdateSettingsResult> for UpdateSettingsCommandHandler {
+    #[instrument(skip_all, name = "command.update_settings")]
     async fn handle(&self, command: UpdateSettingsCommand) -> Result<UpdateSettingsResult, DomainError> {
         let flow_id = self.settings_port.initiate_settings(&command.cookie).await?;
         let (flow_id, messages) = self

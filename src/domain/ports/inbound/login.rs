@@ -13,8 +13,15 @@ pub struct LoginCredentials {
     pub resend: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct LoginFlowData {
+    pub flow_id: String,
+    pub csrf_token: String,
+    pub cookies: Vec<String>,
+}
+
 #[async_trait]
 pub trait AuthenticationPort: Send + Sync {
-    async fn initiate_login(&self, cookie: Option<&str>) -> Result<String, DomainError>;
-    async fn complete_login(&self, flow_id: &str, credentials: LoginCredentials) -> Result<String, DomainError>;
+    async fn initiate_login(&self, cookie: Option<&str>) -> Result<LoginFlowData, DomainError>;
+    async fn complete_login(&self, flow: LoginFlowData, credentials: LoginCredentials) -> Result<String, DomainError>;
 }

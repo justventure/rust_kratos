@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+use tracing::instrument;
 
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::login::LoginCommand;
@@ -24,6 +25,7 @@ use crate::presentation::api::rest::v1::schema::auth::LoginSchema;
         (status = 409, description = "Already logged in"),
     )
 )]
+#[instrument(skip_all, name = "http.login")]
 pub async fn login(req: HttpRequest, use_cases: web::Data<Arc<UseCases>>, dto: web::Json<LoginDto>) -> HttpResponse {
     let credentials: LoginCredentials = match dto.into_inner().try_into() {
         Ok(c) => c,
