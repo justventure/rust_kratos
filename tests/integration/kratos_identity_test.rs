@@ -13,7 +13,7 @@ use common::TestContext;
 async fn test_get_current_user_without_cookie_returns_error() {
     let ctx = TestContext::new();
     let adapter = KratosIdentityAdapter::new(ctx.client.clone(), None, 0);
-    let result = adapter.get_current_user("invalid_cookie=abc").await;
+    let result = adapter.get_current_user("ory_kratos_session=invalid").await;
     assert!(result.is_err());
 }
 
@@ -23,13 +23,17 @@ async fn test_get_current_user_after_login_returns_profile() {
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let username = format!("user_{}", uuid::Uuid::new_v4());
-    let session_cookie = register_and_login(&ctx, &email, &username, password).await;
+
+    let session_token = register_and_login(&ctx, &email, &username, password).await;
+    let cookie = format!("ory_kratos_session={}", session_token);
+
     let adapter = KratosIdentityAdapter::new(ctx.client.clone(), None, 0);
-    let result = adapter.get_current_user(&session_cookie).await;
+    let result = adapter.get_current_user(&cookie).await;
+
     assert!(result.is_ok());
     let profile = result.unwrap();
-    assert_eq!(profile.email, email);
-    assert_eq!(profile.username, username);
+    assert_eq!(profile.traits.email, email);
+    assert_eq!(profile.traits.username.unwrap(), username);
 }
 
 #[tokio::test]
@@ -38,11 +42,15 @@ async fn test_get_current_user_returns_email_and_username() {
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let username = format!("user_{}", uuid::Uuid::new_v4());
-    let session_cookie = register_and_login(&ctx, &email, &username, password).await;
+
+    let session_token = register_and_login(&ctx, &email, &username, password).await;
+    let cookie = format!("ory_kratos_session={}", session_token);
+
     let adapter = KratosIdentityAdapter::new(ctx.client.clone(), None, 0);
-    let profile = adapter.get_current_user(&session_cookie).await.unwrap();
-    assert!(!profile.email.is_empty());
-    assert!(!profile.username.is_empty());
+    let profile = adapter.get_current_user(&cookie).await.unwrap();
+
+    assert!(!profile.traits.email.is_empty());
+    assert!(profile.traits.username.is_some());
 }
 
 async fn register_and_login(ctx: &TestContext, email: &str, username: &str, password: &str) -> String {
@@ -94,7 +102,8 @@ async fn register_and_login(ctx: &TestContext, email: &str, username: &str, pass
 
     let session: Arc<dyn SessionPort> = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone(), session);
-    let flow_id = adapter.initiate_login(None).await.unwrap();
+    let login_flow = adapter.initiate_login(None).await.unwrap();
+
     let credentials = LoginCredentials {
         identifier: Email::new(email).unwrap(),
         password: Password::new(password).unwrap(),
@@ -102,5 +111,14 @@ async fn register_and_login(ctx: &TestContext, email: &str, username: &str, pass
         code: None,
         resend: None,
     };
-    adapter.complete_login(&flow_id, credentials).await.unwrap()
+
+    let result = adapter.complete_login(login_flow, credentials).await.unwrap();
+
+    result
+        .session_cookie
+        .split(';')
+        .next()
+        .and_then(|s| s.trim().strip_prefix("ory_kratos_session="))
+        .unwrap_or(&result.session_cookie)
+        .to_string()
 }

@@ -22,15 +22,15 @@ async fn test_initiate_login_returns_flow_id() {
     let adapter = make_auth_adapter(&ctx);
     let result = adapter.initiate_login(None).await;
     assert!(result.is_ok());
-    let flow_id = result.unwrap();
-    assert!(!flow_id.is_empty());
+    let flow_data = result.unwrap();
+    assert!(!flow_data.flow_id.is_empty());
 }
 
 #[tokio::test]
 async fn test_complete_login_with_invalid_credentials() {
     let ctx = TestContext::new();
     let adapter = make_auth_adapter(&ctx);
-    let flow_id = adapter.initiate_login(None).await.unwrap();
+    let flow_data = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new("nonexistent@example.com").unwrap(),
         password: Password::new("wrongpassword").unwrap(),
@@ -38,7 +38,7 @@ async fn test_complete_login_with_invalid_credentials() {
         code: None,
         resend: None,
     };
-    let result = adapter.complete_login(&flow_id, credentials).await;
+    let result = adapter.complete_login(flow_data, credentials).await;
     assert!(result.is_err());
 }
 
@@ -49,7 +49,7 @@ async fn test_register_then_login() {
     let password = "Test1234!@#$";
     register_user(&ctx, &email, password).await;
     let adapter = make_auth_adapter(&ctx);
-    let flow_id = adapter.initiate_login(None).await.unwrap();
+    let flow_data = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new(&email).unwrap(),
         password: Password::new(password).unwrap(),
@@ -57,10 +57,8 @@ async fn test_register_then_login() {
         code: None,
         resend: None,
     };
-    let result = adapter.complete_login(&flow_id, credentials).await;
-    assert!(result.is_ok());
-    let cookie = result.unwrap();
-    assert!(!cookie.is_empty());
+    let login_result = adapter.complete_login(flow_data, credentials).await.unwrap();
+    assert!(!login_result.session_cookie.is_empty());
 }
 
 #[tokio::test]
@@ -121,7 +119,7 @@ async fn register_user(ctx: &TestContext, email: &str, password: &str) {
 async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> String {
     register_user(ctx, email, password).await;
     let adapter = make_auth_adapter(ctx);
-    let flow_id = adapter.initiate_login(None).await.unwrap();
+    let flow_data = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new(email).unwrap(),
         password: Password::new(password).unwrap(),
@@ -129,5 +127,6 @@ async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> S
         code: None,
         resend: None,
     };
-    adapter.complete_login(&flow_id, credentials).await.unwrap()
+    let login_result = adapter.complete_login(flow_data, credentials).await.unwrap();
+    login_result.session_cookie
 }

@@ -21,23 +21,23 @@ async fn test_initiate_registration_returns_flow_id() {
     let adapter = make_adapter(&ctx);
     let result = adapter.initiate_registration(None).await;
     assert!(result.is_ok());
-    assert!(!result.unwrap().is_empty());
+    assert!(!result.unwrap().flow_id.is_empty());
 }
 
 #[tokio::test]
 async fn test_complete_registration_returns_session_cookie() {
     let ctx = TestContext::new();
     let adapter = make_adapter(&ctx);
-    let flow_id = adapter.initiate_registration(None).await.unwrap();
+    let flow = adapter.initiate_registration(None).await.unwrap();
     let data = RegistrationData {
         email: Email::new(&TestContext::random_email()).unwrap(),
         username: format!("user_{}", uuid::Uuid::new_v4()),
         password: Password::new("Test1234!@#$").unwrap(),
         geo_location: None,
     };
-    let result = adapter.complete_registration(&flow_id, data).await;
+    let result = adapter.complete_registration(flow, data).await;
     assert!(result.is_ok());
-    assert!(result.unwrap().contains("ory_kratos_session"));
+    assert!(result.unwrap().session_cookie.contains("ory_kratos_session"));
 }
 
 #[tokio::test]
@@ -46,10 +46,10 @@ async fn test_complete_registration_with_duplicate_email_fails() {
     let adapter = make_adapter(&ctx);
     let email = TestContext::random_email();
 
-    let flow_id = adapter.initiate_registration(None).await.unwrap();
+    let flow = adapter.initiate_registration(None).await.unwrap();
     adapter
         .complete_registration(
-            &flow_id,
+            flow,
             RegistrationData {
                 email: Email::new(&email).unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
@@ -60,10 +60,10 @@ async fn test_complete_registration_with_duplicate_email_fails() {
         .await
         .unwrap();
 
-    let flow_id = adapter.initiate_registration(None).await.unwrap();
+    let flow = adapter.initiate_registration(None).await.unwrap();
     let result = adapter
         .complete_registration(
-            &flow_id,
+            flow,
             RegistrationData {
                 email: Email::new(&email).unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),

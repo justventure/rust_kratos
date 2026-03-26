@@ -103,13 +103,16 @@ async fn register_and_login(ctx: &TestContext) -> String {
 
     let session: Arc<dyn SessionPort> = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone(), session);
-    let flow_id = adapter.initiate_login(None).await.unwrap();
+    let flow = adapter.initiate_login(None).await.unwrap();
+
     let credentials = LoginCredentials {
-        identifier: Email::new(&email).unwrap(),
+        identifier: Email::new(email).unwrap(),
         password: Password::new(password).unwrap(),
         address: None,
         code: None,
         resend: None,
     };
-    adapter.complete_login(&flow_id, credentials).await.unwrap()
+
+    let result = adapter.complete_login(flow, credentials).await.unwrap();
+    result.session_cookie
 }

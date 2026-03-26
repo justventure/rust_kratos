@@ -116,8 +116,10 @@ async fn test_login_command_returns_session_cookie() {
             cookie: None,
         })
         .await;
+
     assert!(result.is_ok());
-    assert!(!result.unwrap().is_empty());
+    let login_result = result.unwrap();
+    assert!(!login_result.session_cookie.is_empty());
 }
 
 #[tokio::test]
@@ -171,11 +173,15 @@ async fn test_get_current_user_with_valid_session() {
     let ctx = TestContext::new();
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
+
     let cookie = register_and_login(&ctx, &email, password).await;
     let handler = make_get_current_user_handler(&ctx);
+
     let result = handler.handle(GetCurrentUserQuery { cookie: Some(cookie) }).await;
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().email, email);
+
+    let user_profile = result.unwrap();
+    assert_eq!(user_profile.traits.email, email);
 }
 
 #[tokio::test]

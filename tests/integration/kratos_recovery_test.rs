@@ -49,10 +49,12 @@ async fn register_user(ctx: &TestContext) -> String {
     let email = TestContext::random_email();
     let session = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
     let adapter = KratosRegistrationAdapter::new(ctx.client.clone(), session);
-    let flow_id = adapter.initiate_registration(None).await.unwrap();
+
+    let flow = adapter.initiate_registration(None).await.unwrap();
+
     adapter
         .complete_registration(
-            &flow_id,
+            flow,
             RegistrationData {
                 email: Email::new(&email).unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
@@ -62,5 +64,6 @@ async fn register_user(ctx: &TestContext) -> String {
         )
         .await
         .unwrap();
+
     email
 }
