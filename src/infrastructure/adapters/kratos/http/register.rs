@@ -4,8 +4,11 @@ use async_trait::async_trait;
 use reqwest::StatusCode;
 use tracing::{error, instrument};
 
+use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationFlowData, RegistrationPort};
+use crate::domain::ports::inbound::registration::{
+    RegistrationData, RegistrationFlowData, RegistrationPort, RegistrationResult,
+};
 use crate::domain::ports::outbound::session::SessionPort;
 use crate::domain::value_objects::flow_id::FlowId;
 use crate::domain::value_objects::session_cookie::SessionCookie;
@@ -62,7 +65,7 @@ impl RegistrationPort for KratosRegistrationAdapter {
         &self,
         flow: RegistrationFlowData,
         data: RegistrationData,
-    ) -> Result<String, DomainError> {
+    ) -> Result<RegistrationResult, DomainError> {
         let flow_result = FlowResult {
             flow_id: FlowId::new(&flow.flow_id),
             csrf_token: flow.csrf_token.clone(),
@@ -70,12 +73,30 @@ impl RegistrationPort for KratosRegistrationAdapter {
         };
         let payload = RegistrationPayload::from_data(data, flow.csrf_token);
         let result = self.post_registration_flow(&flow_result, payload).await?;
-        SessionCookie::find_in(result.cookies)
+
+        let session_cookie = SessionCookie::find_in(result.cookies)
             .map(|c| c.as_str().to_string())
             .ok_or_else(|| {
                 error!("Session cookie not found after registration");
                 DomainError::Internal("No session cookie was created".into())
-            })
+            })?;
+
+        let identity = &result.data["identity"];
+        let traits = &identity["traits"];
+
+        let user = UserProfile {
+            id: identity["id"].as_str().unwrap_or_default().to_string(),
+            traits: crate::domain::entities::user_profile::UserTraits {
+                email: traits["email"].as_str().unwrap_or_default().to_string(),
+                username: traits["username"].as_str().map(|s| s.to_string()),
+                geo_location: traits["geo_location"].as_str().map(|s| s.to_string()),
+            },
+            created_at: serde_json::from_value(identity["created_at"].clone()).ok(),
+            updated_at: serde_json::from_value(identity["updated_at"].clone()).ok(),
+            state: identity["state"].as_str().map(|s| s.to_string()),
+        };
+
+        Ok(RegistrationResult { session_cookie, user })
     }
 }
 

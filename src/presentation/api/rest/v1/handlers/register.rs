@@ -8,9 +8,9 @@ use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::inbound::registration::RegistrationData;
 use crate::infrastructure::adapters::http::cookies::RequestResponseCookies;
 use crate::infrastructure::di::container::UseCases;
-use crate::presentation::api::rest::v1::dto::auth::RegisterDto;
+use crate::presentation::api::rest::v1::dto::auth::{RegisterDto, UserProfileResponse};
 use crate::presentation::api::rest::v1::handlers::utils::extract_cookie;
-use crate::presentation::api::rest::v1::schema::auth::RegisterSchema;
+use crate::presentation::api::rest::v1::schema::auth::{RegisterSchema, UserProfileResponseSchema};
 
 #[utoipa::path(
     post,
@@ -18,7 +18,7 @@ use crate::presentation::api::rest::v1::schema::auth::RegisterSchema;
     tag = "auth",
     request_body = RegisterSchema,
     responses(
-        (status = 201, description = "Registered"),
+        (status = 201, description = "Registered", body = UserProfileResponseSchema),
         (status = 400, description = "Invalid data"),
         (status = 409, description = "Already logged in or email exists"),
     )
@@ -50,7 +50,7 @@ pub async fn register(
                 .get_mut::<RequestResponseCookies>()
                 .unwrap()
                 .add(result.session_cookie);
-            HttpResponse::Created().finish()
+            HttpResponse::Created().json(UserProfileResponse::from(result.user))
         }
         Err(DomainError::Auth(AuthError::AlreadyLoggedIn)) => HttpResponse::Conflict().body("Already logged in"),
         Err(DomainError::Conflict(msg)) => HttpResponse::Conflict().body(msg),

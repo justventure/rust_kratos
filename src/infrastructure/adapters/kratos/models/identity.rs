@@ -21,22 +21,22 @@ pub struct Identity {
 #[derive(serde::Deserialize)]
 pub struct Traits {
     pub email: String,
-    pub username: String,
+    pub username: Option<String>,
     pub geo_location: Option<String>,
 }
 
 impl From<(Identity, bool, Option<DateTime<Utc>>)> for UserProfile {
-    fn from((identity, active, expires_at): (Identity, bool, Option<DateTime<Utc>>)) -> Self {
+    fn from((identity, _active, _expires_at): (Identity, bool, Option<DateTime<Utc>>)) -> Self {
         Self {
             id: identity.id,
-            email: identity.traits.email,
-            username: identity.traits.username,
-            geo_location: identity.traits.geo_location,
+            traits: crate::domain::entities::user_profile::UserTraits {
+                email: identity.traits.email,
+                username: identity.traits.username,
+                geo_location: identity.traits.geo_location,
+            },
             created_at: identity.created_at,
             updated_at: identity.updated_at,
             state: identity.state,
-            active,
-            expires_at,
         }
     }
 }

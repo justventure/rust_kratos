@@ -25,6 +25,6 @@ retry_delay_ms = 2000
 keep_alive_secs = 60
 
 [telemetry]
-enabled = true
+enabled = false
 otlp_endpoint = "http://127.0.0.1:4317"
 service_name = "rust_kratos"

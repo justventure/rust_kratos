@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::DomainError;
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::password::Password;
@@ -19,6 +20,12 @@ pub struct RegistrationFlowData {
     pub cookies: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct RegistrationResult {
+    pub session_cookie: String,
+    pub user: UserProfile,
+}
+
 #[async_trait]
 pub trait RegistrationPort: Send + Sync {
     async fn initiate_registration(&self, cookie: Option<&str>) -> Result<RegistrationFlowData, DomainError>;
@@ -26,5 +33,5 @@ pub trait RegistrationPort: Send + Sync {
         &self,
         flow: RegistrationFlowData,
         data: RegistrationData,
-    ) -> Result<String, DomainError>;
+    ) -> Result<RegistrationResult, DomainError>;
 }

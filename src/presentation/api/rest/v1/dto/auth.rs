@@ -68,27 +68,23 @@ pub struct UpdateSettingsDto {
 pub struct UserProfileResponse {
     pub id: String,
     pub email: String,
-    pub username: String,
+    pub username: Option<String>,
     pub geo_location: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub state: Option<String>,
-    pub active: bool,
-    pub expires_at: Option<DateTime<Utc>>,
 }
 
 impl From<UserProfile> for UserProfileResponse {
     fn from(p: UserProfile) -> Self {
         Self {
             id: p.id,
-            email: p.email,
-            username: p.username,
-            geo_location: p.geo_location,
+            email: p.traits.email,
+            username: p.traits.username,
+            geo_location: p.traits.geo_location,
             created_at: p.created_at,
             updated_at: p.updated_at,
             state: p.state,
-            active: p.active,
-            expires_at: p.expires_at,
         }
     }
 }

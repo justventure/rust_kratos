@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reqwest::StatusCode;
-use tracing::{debug, error, instrument};
+use tracing::{error, instrument};
 
+use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials, LoginFlowData};
+use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials, LoginFlowData, LoginResult};
 use crate::domain::ports::outbound::session::SessionPort;
 use crate::domain::value_objects::flow_id::FlowId;
 use crate::domain::value_objects::session_cookie::SessionCookie;
@@ -64,12 +65,12 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
     }
 
     #[instrument(skip_all, name = "kratos.complete_login")]
-    async fn complete_login(&self, flow: LoginFlowData, credentials: LoginCredentials) -> Result<String, DomainError> {
+    async fn complete_login(
+        &self,
+        flow: LoginFlowData,
+        credentials: LoginCredentials,
+    ) -> Result<LoginResult, DomainError> {
         let payload = LoginPayload::from_credentials(credentials, flow.csrf_token.clone());
-        debug!(
-            "Login payload: {}",
-            serde_json::to_string_pretty(&payload).unwrap_or_default()
-        );
         let flow_id = FlowId::new(&flow.flow_id);
         let result = post_flow(
             &self.client.client,
@@ -81,13 +82,29 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         )
         .await
         .map_err(map_login_error)?;
-        debug!("Received cookies: {:?}", result.cookies);
-        debug!("Response data: {:?}", result.data);
-        SessionCookie::find_in(result.cookies)
+
+        let session_cookie = SessionCookie::find_in(result.cookies)
             .map(|c| c.as_str().to_string())
             .ok_or_else(|| {
                 error!("Session cookie not found in response cookies");
                 DomainError::Internal("Session token not found".into())
-            })
+            })?;
+
+        let identity = &result.data["session"]["identity"];
+        let traits = &identity["traits"];
+
+        let user = UserProfile {
+            id: identity["id"].as_str().unwrap_or_default().to_string(),
+            traits: crate::domain::entities::user_profile::UserTraits {
+                email: traits["email"].as_str().unwrap_or_default().to_string(),
+                username: traits["username"].as_str().map(|s| s.to_string()),
+                geo_location: traits["geo_location"].as_str().map(|s| s.to_string()),
+            },
+            created_at: serde_json::from_value(identity["created_at"].clone()).ok(),
+            updated_at: serde_json::from_value(identity["updated_at"].clone()).ok(),
+            state: identity["state"].as_str().map(|s| s.to_string()),
+        };
+
+        Ok(LoginResult { session_cookie, user })
     }
 }

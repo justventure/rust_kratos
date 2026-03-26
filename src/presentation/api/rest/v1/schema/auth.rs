@@ -20,6 +20,19 @@ pub struct LoginSchema {
     pub resend: Option<String>,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct UserProfileResponseSchema {
+    pub id: String,
+    pub email: String,
+    pub username: String,
+    pub geo_location: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub state: Option<String>,
+    pub active: bool,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct RecoverySchema {
     pub email: String,
