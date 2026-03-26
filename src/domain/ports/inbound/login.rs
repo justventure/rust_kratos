@@ -21,6 +21,20 @@ pub struct LoginFlowData {
     pub cookies: Vec<String>,
 }
 
+pub struct OidcFlowData {
+    pub flow_id: String,
+    pub csrf_token: String,
+    pub cookies: Vec<String>,
+    pub redirect_url: String,
+}
+
+pub struct OidcCallbackData {
+    pub flow_id: String,
+    pub cookies: Vec<String>,
+    pub code: String,
+    pub state: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct LoginResult {
     pub session_cookie: String,
@@ -35,4 +49,8 @@ pub trait AuthenticationPort: Send + Sync {
         flow: LoginFlowData,
         credentials: LoginCredentials,
     ) -> Result<LoginResult, DomainError>;
+
+    async fn initiate_oidc_login(&self, provider: &str, cookie: Option<&str>) -> Result<OidcFlowData, DomainError>;
+
+    async fn complete_oidc_login(&self, callback: OidcCallbackData) -> Result<LoginResult, DomainError>;
 }

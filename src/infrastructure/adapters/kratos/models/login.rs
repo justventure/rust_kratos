@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::domain::ports::inbound::login::LoginCredentials;
 use crate::domain::value_objects::auth_method::AuthMethod;
 
@@ -29,6 +31,29 @@ impl LoginPayload {
             address: credentials.address,
             code: credentials.code,
             resend: credentials.resend,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct OidcLoginPayload {
+    pub method: String,
+    pub provider: String,
+    pub csrf_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token_nonce: Option<String>,
+}
+
+impl OidcLoginPayload {
+    pub fn new(provider: &str, csrf_token: String) -> Self {
+        Self {
+            method: "oidc".to_string(),
+            provider: provider.to_string(),
+            csrf_token,
+            id_token: None,
+            id_token_nonce: None,
         }
     }
 }
