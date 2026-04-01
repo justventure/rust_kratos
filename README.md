@@ -16,6 +16,11 @@ make infra-up
 make run
 ```
 
+### Swagger
+```
+http://${APP_HOST}:${APP_PORT}/v1/docs
+```
+
 ### Available APP_ENV values
 | APP_ENV value | Используемый конфиг |
 |---------------|---------------------|
