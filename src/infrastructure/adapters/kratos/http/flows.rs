@@ -71,6 +71,14 @@ pub async fn post_flow(
     let response_cookies = extract_cookies(&response);
     let status = response.status();
 
+    if status == StatusCode::SEE_OTHER || status == StatusCode::FOUND {
+        let body = response
+            .json::<serde_json::Value>()
+            .await
+            .unwrap_or_else(|_| serde_json::json!({}));
+        return Err(KratosFlowError { status, body });
+    }
+
     if !status.is_success() {
         let body = response
             .json::<serde_json::Value>()
@@ -134,6 +142,13 @@ async fn handle_redirect(
         .and_then(|h| h.to_str().ok())
         .ok_or_else(|| KratosFlowError::network("No redirect location found"))?;
 
+    if !location.contains("flow=") {
+        return Err(KratosFlowError {
+            status: StatusCode::UNAUTHORIZED,
+            body: serde_json::json!({ "error": "session required" }),
+        });
+    }
+
     let flow_id_str = location
         .split("flow=")
         .nth(1)
@@ -147,14 +162,16 @@ async fn handle_redirect(
         flow_id_str
     );
 
-    let mut flow_request = client.get(&flow_url);
-    if !flow_cookies.is_empty() {
-        flow_request = flow_request.header(header::COOKIE, flow_cookies.join("; "));
-    } else if let Some(cookie_value) = cookie {
-        flow_request = flow_request.header(header::COOKIE, cookie_value);
-    }
+    let mut all_cookies: Vec<String> = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
+    all_cookies.extend(flow_cookies);
 
-    let flow_response = flow_request.send().await.map_err(KratosFlowError::network)?;
+    let flow_response = client
+        .get(&flow_url)
+        .header(header::COOKIE, all_cookies.join("; "))
+        .send()
+        .await
+        .map_err(KratosFlowError::network)?;
+
     let status = flow_response.status();
 
     if !status.is_success() {
@@ -169,9 +186,6 @@ async fn handle_redirect(
 
     let csrf_token = extract_csrf_token(&flow).map_err(KratosFlowError::network)?;
     let flow_id = extract_flow_id(&flow).map_err(KratosFlowError::network)?;
-
-    let mut all_cookies = cookie.map(|c| vec![c.to_string()]).unwrap_or_default();
-    all_cookies.extend(flow_cookies);
 
     Ok(FlowResult {
         flow_id,
