@@ -29,5 +29,4 @@ http://${APP__SERVER__HOST}:${APP__SERVER__PORT}/v1/docs
 | docker_local  | docker_local.toml   |
 | -             | development.toml    |
 
-### Benchmark
-![Benchmark](benchmark/Screenshot%20From%202026-03-23%2002-22-38.png)
+[`.env.example for redefine toml values`](.env.example)
