@@ -18,7 +18,7 @@ make run
 
 ### Swagger
 ```
-http://${APP__SERVER__HOST}:${APP__SERVER_PORT}/v1/docs
+http://${APP__SERVER__HOST}:${APP__SERVER__PORT}/v1/docs
 ```
 
 ### Available APP_ENV values
