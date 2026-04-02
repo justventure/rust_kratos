@@ -81,10 +81,10 @@ impl MailhogClient {
                 .await
                 .ok()?;
             let data: MailhogResponse = resp.json().await.ok()?;
-            if let Some(msg) = data.items.first() {
-                if let Some(link) = Self::extract_link(&msg.content.body, "recovery") {
-                    return Some(link);
-                }
+            if let Some(msg) = data.items.first()
+                && let Some(link) = Self::extract_link(&msg.content.body, "recovery")
+            {
+                return Some(link);
             }
         }
         None

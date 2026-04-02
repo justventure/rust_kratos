@@ -28,3 +28,11 @@ otlp-up:
 	$(MAKE) -C $(INFRA_PATH) otlp-up
 otlp-down:
 	$(MAKE) -C $(INFRA_PATH) otlp-down
+
+fmt:
+	cargo fmt --all
+
+clippy:
+	cargo clippy --all-targets --all-features -- -D warnings
+
+lint: fmt clippy

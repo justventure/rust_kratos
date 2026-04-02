@@ -4,9 +4,7 @@ use rust_kratos::domain::ports::inbound::recovery::{RecoveryPort, RecoveryReques
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 #[tokio::test]
 async fn test_initiate_recovery_with_nonexistent_email_succeeds() {

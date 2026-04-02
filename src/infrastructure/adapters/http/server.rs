@@ -4,6 +4,7 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer, http, web};
 use actix_web_prometheus::PrometheusMetricsBuilder;
 use anyhow::Context;
+use tokio::sync::Semaphore;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
 
@@ -19,17 +20,18 @@ pub struct HttpServerConfig {
     pub port: u16,
     pub cors_max_age: usize,
     pub cors_allowed_origins: Vec<String>,
+    pub max_connections: usize,
+    pub max_concurrent_requests: usize,
+    pub worker_threads: usize,
 }
 
 pub async fn start(config: HttpServerConfig, container: Arc<AppContainer>) -> anyhow::Result<()> {
     let bind_address = format!("{}:{}", config.host, config.port);
-    info!("Booting HTTP server at http://{}", bind_address);
-
+    let semaphore = Arc::new(Semaphore::new(config.max_concurrent_requests));
     let prometheus = PrometheusMetricsBuilder::new("api")
         .endpoint("/metrics")
         .build()
         .map_err(|e| anyhow::anyhow!("Failed to build Prometheus metrics: {}", e))?;
-
     let cors_max_age = config.cors_max_age;
     let cors_allowed_origins = config.cors_allowed_origins.clone();
     let bind_address_clone = bind_address.clone();
@@ -61,16 +63,23 @@ pub async fn start(config: HttpServerConfig, container: Arc<AppContainer>) -> an
             .wrap(TracingLogger::default())
             .wrap(CookieMiddleware)
             .wrap(cors)
+            .app_data(web::JsonConfig::default().limit(1 * 1024 * 1024))
             .app_data(web::Data::new(use_cases.clone()))
+            .app_data(web::Data::new(semaphore.clone()))
             .configure(health_check::configure)
             .service(web::scope("/api/v1").configure(handlers::configure))
             .configure(swagger::configure)
     })
+    .workers(config.worker_threads)
+    .max_connections(config.max_connections)
+    .max_connection_rate(config.max_concurrent_requests)
+    .backlog(128)
+    .client_request_timeout(std::time::Duration::from_secs(30))
     .bind(&bind_address_clone)
     .with_context(|| format!("Failed to bind server to {}", bind_address_clone))?;
 
-    info!("✅ HTTP server successfully started on http://{}", bind_address);
-    info!("📊 Prometheus Metrics: http://{}/metrics", bind_address);
+    info!("Starting HTTP server at http://{}", bind_address);
+    info!("Prometheus metrics at http://{}/metrics", bind_address);
 
     server
         .run()

@@ -6,9 +6,7 @@ use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 fn make_adapter(ctx: &TestContext) -> KratosRegistrationAdapter {
     let session = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
@@ -30,7 +28,7 @@ async fn test_complete_registration_returns_session_cookie() {
     let adapter = make_adapter(&ctx);
     let flow = adapter.initiate_registration(None).await.unwrap();
     let data = RegistrationData {
-        email: Email::new(&TestContext::random_email()).unwrap(),
+        email: Email::new(TestContext::random_email()).unwrap(),
         username: format!("user_{}", uuid::Uuid::new_v4()),
         password: Password::new("Test1234!@#$").unwrap(),
         geo_location: None,

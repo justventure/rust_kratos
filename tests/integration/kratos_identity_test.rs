@@ -5,9 +5,7 @@ use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 #[tokio::test]
 async fn test_get_current_user_without_cookie_returns_error() {

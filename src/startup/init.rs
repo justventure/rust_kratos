@@ -17,6 +17,7 @@ pub async fn run() -> anyhow::Result<()> {
     tracing.set_level(&config.server.log_level)?;
     info!("Starting application...");
     validate_config(&config)?;
+
     let container_config = ContainerConfig {
         kratos: KratosClientConfig {
             admin_url: config.kratos.admin_url.clone(),
@@ -39,19 +40,26 @@ pub async fn run() -> anyhow::Result<()> {
             keep_alive_secs: config.redis.keep_alive_secs,
         },
     };
+
     let http_config = HttpServerConfig {
         host: config.server.host.clone(),
         port: config.server.port,
         cors_max_age: config.server.cors_max_age,
         cors_allowed_origins: config.server.cors_allowed_origins.clone(),
+        max_connections: config.server.max_connections,
+        max_concurrent_requests: config.server.max_concurrent_requests,
+        worker_threads: config.server.worker_threads,
     };
+
     let container = Arc::new(AppContainer::new(container_config).await?);
+
     tokio::select! {
         result = server::start(http_config, container) => result?,
         _ = shutdown_signal() => {
             info!("Shutdown signal received, starting graceful shutdown...");
         }
     }
+
     Ok(())
 }
 
@@ -70,6 +78,7 @@ async fn shutdown_signal() {
     let mut sigterm = signal::unix::signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
     let mut sigquit = signal::unix::signal(SignalKind::quit()).expect("Failed to install SIGQUIT handler");
     let mut sighup = signal::unix::signal(SignalKind::hangup()).expect("Failed to install SIGHUP handler");
+
     tokio::select! {
         _ = sigint.recv()  => warn!(signal = "SIGINT",  code = 2,  "Received shutdown signal"),
         _ = sigterm.recv() => info!(signal = "SIGTERM", code = 15, "Received shutdown signal"),

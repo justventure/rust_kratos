@@ -5,9 +5,7 @@ use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 #[tokio::test]
 async fn test_check_active_session_without_cookie_returns_false() {

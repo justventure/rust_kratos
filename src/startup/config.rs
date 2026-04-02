@@ -97,6 +97,12 @@ pub struct ServerConfig {
     pub cors_max_age: usize,
     #[serde(default = "defaults::cors_allowed_origins")]
     pub cors_allowed_origins: Vec<String>,
+    #[serde(default = "defaults::max_connections")]
+    pub max_connections: usize,
+    #[serde(default = "defaults::max_concurrent_requests")]
+    pub max_concurrent_requests: usize,
+    #[serde(default = "defaults::worker_threads")]
+    pub worker_threads: usize,
 }
 
 impl Config {
@@ -139,6 +145,12 @@ mod defaults {
     pub fn log_level() -> String { "info".to_string() }
     pub fn cors_max_age() -> usize { 3600 }
     pub fn cors_allowed_origins() -> Vec<String> { vec!["http://localhost:3000".to_string()] }
+
+    // Backpressure
+    pub fn max_connections() -> usize { 1000 }
+    pub fn max_concurrent_requests() -> usize { 500 }
+    pub fn worker_threads() -> usize { num_cpus::get() }
+
     // Telemetry
     pub fn otlp_endpoint() -> String { "http://localhost:4317".to_string() }
     pub fn service_name() -> String { "auth-service".to_string() }

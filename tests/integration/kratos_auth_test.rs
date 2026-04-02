@@ -7,9 +7,7 @@ use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 fn make_auth_adapter(ctx: &TestContext) -> KratosAuthenticationAdapter {
     let session: Arc<dyn SessionPort> = Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));

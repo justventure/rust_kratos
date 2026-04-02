@@ -21,9 +21,7 @@ use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecover
 use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
 use rust_kratos::infrastructure::adapters::kratos::http::settings::KratosSettingsAdapter;
 
-#[path = "../common/mod.rs"]
-mod common;
-use common::TestContext;
+use crate::common::TestContext;
 
 fn make_session_adapter(ctx: &TestContext) -> Arc<dyn SessionPort> {
     Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None))
@@ -84,7 +82,7 @@ async fn test_register_command_returns_session_cookie() {
         .handle(RegisterCommand {
             cookie: None,
             data: RegistrationData {
-                email: Email::new(&TestContext::random_email()).unwrap(),
+                email: Email::new(TestContext::random_email()).unwrap(),
                 password: Password::new("Test1234!@#$").unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
                 geo_location: None,
